@@ -125,17 +125,28 @@ if st.session_state.stage == "intro":
 
 elif st.session_state.stage == "gameplay":
     index = st.session_state.current_item_index
-    current_key = f"input_{index}"
+    transcript = st.query_params.get("speech_result")
+    submission = st.query_params.get("answer_submission")
+    skip = st.query_params.get("skip_item")
 
-    # Process transcript sent via query params from iframe
-    if "speech_result" in st.query_params:
-        transcript = str(st.query_params["speech_result"])
+    if transcript is not None:
+        st.session_state.last_transcript = str(transcript)
         st.query_params.clear()
-        st.session_state.last_transcript = transcript
-        st.session_state[current_key] = transcript
+        st.rerun()
+
+    if submission is not None or skip is not None:
+        answer = "跳過" if skip is not None else str(submission)
+        correct = evaluate_answer(answer)
+        st.query_params.clear()
+        if correct:
+            st.success("✅ 正確！ (Correct!)", icon="✅")
+            time.sleep(0.8)
+        advance_item()
         st.rerun()
 
     item = ITEMS[index]
+    initial = html.escape(st.session_state.last_transcript, quote=True)
+    displayed = html.escape(st.session_state.last_transcript or "尚未有語音結果")
 
     st.markdown(
         f"<p style='font-size:22px;text-align:center;color:#666;'>進度: {index+1} / {len(ITEMS)}</p>",
@@ -154,119 +165,121 @@ elif st.session_state.stage == "gameplay":
         unsafe_allow_html=True,
     )
 
-    # Isolated Voice Capture Component
     components.html(
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
     body{{margin:0;font-family:sans-serif}}
-    button{{width:100%;height:75px;font-size:24px;font-weight:bold;color:white;border:0;border-radius:16px;cursor:pointer;background:#E65100;box-shadow:0px 4px 8px rgba(0,0,0,0.15)}}
-    button:active{{background:#BF360C}}
+    button{{width:100%;height:65px;font-size:22px;font-weight:bold;color:white;border:0;border-radius:16px;cursor:pointer;margin-bottom:10px}}
+    #mic{{background:#E65100}}
+    #submit{{background:#2E7D32}}
+    #skip{{background:#607D8B}}
     button:disabled{{opacity:.65;cursor:wait}}
-    .status{{font-size:20px;text-align:center;margin-top:10px;color:#333}}
+    .status{{font-size:20px;text-align:center;min-height:30px;margin:8px 0}}
+    label{{display:block;font-size:18px;margin:10px 0 6px}}
+    textarea{{box-sizing:border-box;width:100%;min-height:70px;padding:12px;font-size:22px;border:2px solid #4CAF50;border-radius:12px;resize:vertical}}
+    .display{{background:#E8F5E9;padding:12px;border-radius:12px;font-size:20px;margin:10px 0}}
     </style></head><body>
     <button id="mic" type="button">🎤 按此說話 (Tap & Say)</button>
     <div class="status" id="status">點擊上方按鈕並講出名稱</div>
+    <div class="display">🎤 語音結果：<span id="display">{displayed}</span></div>
+    <label for="answer">答案（可修改或手動輸入）：</label>
+    <textarea id="answer" placeholder="語音結果會顯示在這裡；也可以手動輸入">{initial}</textarea>
+    <button id="submit" type="button">👉 提交答案 / 下一題</button>
+    <button id="skip" type="button">⏭️ 跳過</button>
     <script>
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const mic = document.getElementById('mic'), status = document.getElementById('status');
-    let recognition = null, listening = false;
+    const mic = document.getElementById('mic'), status = document.getElementById('status'), answer = document.getElementById('answer'), display = document.getElementById('display');
+    let recognition = null, listening = false, navigating = false;
 
-    function sendTranscript(text) {{
+    // Safe navigation that works inside sandboxed Streamlit iframes
+    function go(name, value) {{
+      const searchStr = '?' + encodeURIComponent(name) + '=' + encodeURIComponent(value);
+      try {{
+        window.parent.location.search = searchStr;
+      }} catch (e1) {{
         try {{
-            window.parent.postMessage({{type: 'streamlit:setComponentValue', value: text}}, '*');
-            const url = new URL(window.top.location.href);
-            url.search = '';
-            url.searchParams.set('speech_result', text);
-            window.top.location.href = url.toString();
-        }} catch(e) {{
-            window.parent.location.href = "?speech_result=" + encodeURIComponent(text);
+          window.top.location.search = searchStr;
+        }} catch (e2) {{
+          window.parent.location.href = searchStr;
         }}
+      }}
     }}
 
-    if(SR) {{
-        recognition = new SR();
-        recognition.lang = 'zh-HK';
-        recognition.continuous = false;
-        recognition.interimResults = false;
+    function ready(message) {{
+      listening = false;
+      mic.disabled = false;
+      mic.style.background = '#E65100';
+      mic.textContent = '🎤 按此說話 (Tap & Say)';
+      status.textContent = message || '點擊上方按鈕並講出名稱';
+    }}
 
-        recognition.onstart = () => {{
-            listening = true;
-            mic.style.background = '#D32F2F';
-            mic.textContent = '⏹️ 正在聆聽中... (Listening...)';
-            status.textContent = '🔴 正在聆聽中，請講話...';
-        }};
+    if (SR) {{
+      recognition = new SR();
+      recognition.lang = 'zh-HK';
+      recognition.continuous = false;
+      recognition.interimResults = false;
 
-        recognition.onresult = (event) => {{
-            const text = event.results[0][0].transcript.trim();
-            if(!text) {{
-                status.textContent = '⚠️ 沒有聽到內容 — 請再試一次';
-                listening = false;
-                mic.style.background = '#E65100';
-                mic.textContent = '🎤 按此說話 (Tap & Say)';
-                return;
-            }}
-            status.textContent = '✅ 聽到: ' + text;
-            mic.style.background = '#388E3C';
-            setTimeout(() => sendTranscript(text), 300);
-        }};
+      recognition.onstart = () => {{
+        listening = true;
+        mic.style.background = '#D32F2F';
+        mic.textContent = '⏹️ 停止聆聽 (Stop)';
+        status.textContent = '🔴 正在聆聽中，請講話...';
+      }};
 
-        recognition.onerror = (event) => {{
-            listening = false;
-            mic.style.background = '#E65100';
-            mic.textContent = '🎤 按此說話 (Tap & Say)';
-            status.textContent = '⚠️ 未能識別 (' + event.error + ') — 請再試一次';
-        }};
+      recognition.onresult = (event) => {{
+        const text = event.results[0][0].transcript.trim();
+        if (!text) {{
+          ready('⚠️ 沒有聽到內容 — 請再試一次');
+          return;
+        }}
+        listening = false;
+        navigating = true;
+        answer.value = text;
+        display.textContent = text;
+        status.textContent = '✅ 聽到: ' + text;
+        mic.style.background = '#388E3C';
+        go('speech_result', text);
+      }};
 
-        recognition.onend = () => {{
-            if(listening) {{
-                listening = false;
-                mic.style.background = '#E65100';
-                mic.textContent = '🎤 按此說話 (Tap & Say)';
-            }}
-        }};
+      recognition.onerror = (event) => {{
+        navigating = false;
+        ready('⚠️ 未能識別 (' + event.error + ') — 請再試一次');
+      }};
+
+      recognition.onend = () => {{
+        if (!navigating) ready();
+      }};
     }} else {{
-        mic.disabled = true;
-        status.textContent = '❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)';
+      mic.disabled = true;
+      status.textContent = '❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)';
     }}
 
     mic.onclick = () => {{
-        if(!recognition) return;
-        if(listening) {{
-            recognition.stop();
-        }} else {{
-            try {{ recognition.start(); }} catch(e) {{ recognition.stop(); recognition.start(); }}
-        }}
+      if (!recognition) return;
+      if (listening) {{
+        recognition.stop();
+        return;
+      }}
+      navigating = false;
+      ready();
+      try {{
+        recognition.start();
+      }} catch (e) {{
+        ready('⚠️ 麥克風未能啟動 — 請再試一次');
+      }}
+    }};
+
+    document.getElementById('submit').onclick = () => {{
+      go('answer_submission', answer.value || '');
+    }};
+
+    document.getElementById('skip').onclick = () => {{
+      go('skip_item', '1');
     }};
     </script></body></html>
     """,
-        height=130,
+        height=490,
     )
-
-    st.markdown("---")
-
-    # Native Streamlit Controls
-    user_answer = st.text_input(
-        "答案（可修改或手動輸入）：",
-        key=current_key,
-        placeholder="語音結果會顯示在這裡；也可以手動輸入",
-    )
-
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("👉 提交答案 / 下一題", key=f"sub_{index}"):
-            ans = user_answer.strip() if user_answer.strip() else "未有說話"
-            correct = evaluate_answer(ans)
-            if correct:
-                st.success("✅ 正確！ (Correct!)", icon="✅")
-                time.sleep(0.8)
-            advance_item()
-            st.rerun()
-
-    with c2:
-        if st.button("⏭️ 跳過", key=f"skip_{index}"):
-            evaluate_answer("跳過")
-            advance_item()
-            st.rerun()
 
 elif st.session_state.stage == "complete":
     st.balloons()
