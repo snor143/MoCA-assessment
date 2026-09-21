@@ -235,7 +235,7 @@ elif st.session_state.stage == "gameplay":
 
                     recognition.onresult = function(event) {{
                         var transcript = event.results[0][0].transcript;
-                        document.getElementById('status').innerHTML = "✅ 聽到: <b>" + transcript + "</b>";
+                        document.getElementById('status').innerHTML = "🎧 聽到: <b>" + transcript + "</b>";
                         document.getElementById('start-btn').style.backgroundColor = "#388E3C";
                         
                         // Clean history state and pass transcript to Streamlit
