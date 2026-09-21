@@ -117,3 +117,78 @@ def record_response(selected_option):
         st.session_state.item_start_time = time.time()
     else:
         st.session_state.stage = "complete"
+
+# --- STAGE 1: COVERATION INTRO SCREEN ---
+if st.session_state.stage == "intro":
+    st.title("🛒 歡迎來到香港街市 Supermarket Explorer")
+    
+    st.markdown("""
+        <div class="instruction-card">
+            <h2>婆婆/伯伯，今日我們要去超級市場買菜！</h2>
+            <p style="font-size: 22px;">請看看貨架上的新鮮食材，並點擊正確的名稱放入購物車。</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    if st.button("開始逛街買菜 (Start Supermarket Visit)"):
+        st.session_state.stage = "gameplay"
+        st.session_state.item_start_time = time.time()
+        st.rerun()
+
+        # --- STAGE 2: GAMEPLAY (COVERT MOCA NAMING) ---
+elif st.session_state.stage == "gameplay":
+    current_item = ITEMS[st.session_state.current_item_index]
+    
+    st.markdown(f"<p style='font-size: 24px; text-align: center;'>進度 Progress: {st.session_state.current_item_index + 1} / {len(ITEMS)}</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center;'>請告訴婆婆，這是什麼新鮮食材？</h2>", unsafe_allow_html=True)
+    
+    # Display item visual target (Large central graphic)
+    st.markdown(f"<div style='font-size: 140px; text-align: center; margin: 20px 0;'>{current_item['emoji']}</div>", unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Render answer choices as large touch targets
+    cols = st.columns(2)
+    for index, option in enumerate(current_item["options"]):
+        col = cols[index % 2]
+        with col:
+            if st.button(option, key=f"btn_{index}_{st.session_state.current_item_index}"):
+                record_response(option)
+                st.rerun()
+
+        # --- STAGE 3: ASSESSMENT COMPLETE & THERAPIST DASHBOARD ---
+elif st.session_state.stage == "complete":
+    st.balloons()
+    st.title("🎉 買菜完成！感謝您的幫忙！")
+    st.markdown("<p style='font-size: 24px;'>您已經成功將所有食材放入購物車。</p>", unsafe_allow_html=True)
+    
+    if st.button("再玩一次 (Play Again)"):
+        st.session_state.stage = "intro"
+        st.session_state.current_item_index = 0
+        st.session_state.telemetry_logs = []
+        st.session_state.moca_naming_score = 0
+        st.rerun()
+
+    # --- HIDDEN THERAPIST TELEMETRY DASHBOARD ---
+    st.markdown("---")
+    with st.expander("🩺 Occupational Therapist / Researcher Telemetry Dashboard", expanded=True):
+        st.subheader("Converted MoCA Naming Assessment Result")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("MoCA Proxy Naming Sub-score", f"{st.session_state.moca_naming_score} / 3 Points")
+        with col2:
+            avg_latency = pd.DataFrame(st.session_state.telemetry_logs)["reaction_latency_seconds"].mean()
+            st.metric("Avg. Response Latency", f"{round(avg_latency, 2)} seconds")
+            
+        st.subheader("Raw Touch Telemetry Stream (.csv)")
+        df = pd.DataFrame(st.session_state.telemetry_logs)
+        st.dataframe(df)
+        
+        # CSV Export for clinical record-keeping
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Download Telemetry Log (.CSV)",
+            data=csv,
+            file_name=f"moca_naming_telemetry_{int(time.time())}.csv",
+            mime="text/csv"
+        )
