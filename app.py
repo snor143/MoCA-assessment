@@ -170,118 +170,119 @@ elif st.session_state.stage == "gameplay":
         unsafe_allow_html=True,
     )
 
-    # Adding dynamic key=f"voice_component_{index}" forces Streamlit to rebuild iframe for every new question
-    components.html(
-        f"""
-    <!doctype html><html><head><meta charset="utf-8"><style>
-    body {{ margin:0; font-family:sans-serif; }}
-    button {{ width:100%; height:70px; font-size:22px; font-weight:bold; color:white; border:0; border-radius:16px; cursor:pointer; margin-bottom:12px; }}
-    #mic {{ background:#E65100; }}
-    #submit {{ background:#2E7D32; }}
-    #skip {{ background:#607D8B; }}
-    button:disabled {{ opacity:.65; cursor:wait; }}
-    .status {{ font-size:20px; text-align:center; min-height:30px; margin:8px 0; }}
-    label {{ display:block; font-size:18px; margin:10px 0 6px; }}
-    textarea {{ box-sizing:border-box; width:100%; min-height:70px; padding:12px; font-size:22px; border:2px solid #4CAF50; border-radius:12px; resize:vertical; }}
-    .display {{ background:#E8F5E9; padding:12px; border-radius:12px; font-size:20px; margin:10px 0; }}
-    </style></head><body>
-    <button id="mic" type="button">🎤 按此說話 (Tap & Say)</button>
-    <div class="status" id="status">點擊上方按鈕並講出名稱</div>
-    <div class="display">🎤 語音結果：<span id="display">{displayed}</span></div>
-    <label for="answer">答案（可修改或手動輸入）：</label>
-    <textarea id="answer" placeholder="語音結果會顯示在這裡；也可以手動輸入">{initial}</textarea>
-    <button id="submit" type="button">👉 提交答案 / 下一題</button>
-    <button id="skip" type="button">⏭️ 跳過</button>
+    # Wrap the component in st.empty() to force a re-render per question index
+    component_container = st.empty()
+    with component_container.container():
+        components.html(
+            f"""
+        <!doctype html><html><head><meta charset="utf-8"><style>
+        body {{ margin:0; font-family:sans-serif; }}
+        button {{ width:100%; height:70px; font-size:22px; font-weight:bold; color:white; border:0; border-radius:16px; cursor:pointer; margin-bottom:12px; }}
+        #mic {{ background:#E65100; }}
+        #submit {{ background:#2E7D32; }}
+        #skip {{ background:#607D8B; }}
+        button:disabled {{ opacity:.65; cursor:wait; }}
+        .status {{ font-size:20px; text-align:center; min-height:30px; margin:8px 0; }}
+        label {{ display:block; font-size:18px; margin:10px 0 6px; }}
+        textarea {{ box-sizing:border-box; width:100%; min-height:70px; padding:12px; font-size:22px; border:2px solid #4CAF50; border-radius:12px; resize:vertical; }}
+        .display {{ background:#E8F5E9; padding:12px; border-radius:12px; font-size:20px; margin:10px 0; }}
+        </style></head><body>
+        <button id="mic" type="button">🎤 按此說話 (Tap & Say)</button>
+        <div class="status" id="status">點擊上方按鈕並講出名稱</div>
+        <div class="display">🎤 語音結果：<span id="display">{displayed}</span></div>
+        <label for="answer">答案（可修改或手動輸入）：</label>
+        <textarea id="answer" placeholder="語音結果會顯示在這裡；也可以手動輸入">{initial}</textarea>
+        <button id="submit" type="button">👉 提交答案 / 下一題</button>
+        <button id="skip" type="button">⏭️ 跳過</button>
 
-    <script>
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const mic = document.getElementById('mic'), status = document.getElementById('status'), answer = document.getElementById('answer'), display = document.getElementById('display');
-    let recognition = null, listening = false;
+        <script>
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const mic = document.getElementById('mic'), status = document.getElementById('status'), answer = document.getElementById('answer'), display = document.getElementById('display');
+        let recognition = null, listening = false;
 
-    function go(name, value) {{
-      const search = '?' + encodeURIComponent(name) + '=' + encodeURIComponent(value);
-      try {{
-        window.top.location.search = search;
-      }} catch(e1) {{
-        try {{
-          window.parent.location.search = search;
-        }} catch(e2) {{
-          window.location.search = search;
+        function go(name, value) {{
+          const search = '?' + encodeURIComponent(name) + '=' + encodeURIComponent(value);
+          try {{
+            window.top.location.search = search;
+          }} catch(e1) {{
+            try {{
+              window.parent.location.search = search;
+            }} catch(e2) {{
+              window.location.search = search;
+            }}
+          }}
         }}
-      }}
-    }}
 
-    function setMicReady(message) {{
-      listening = false;
-      mic.disabled = false;
-      mic.style.background = '#E65100';
-      mic.textContent = '🎤 按此說話 (Tap & Say)';
-      status.textContent = message || '點擊上方按鈕並講出名稱';
-    }}
-
-    if(SR) {{
-      recognition = new SR();
-      recognition.lang = 'zh-HK';
-      recognition.continuous = false;
-      recognition.interimResults = false;
-
-      recognition.onstart = () => {{
-        listening = true;
-        mic.style.background = '#D32F2F';
-        mic.textContent = '⏹️ 正在聆聽中... (Listening)';
-        status.textContent = '🔴 正在聆聽中，請講話...';
-      }};
-
-      recognition.onresult = (event) => {{
-        const text = event.results[0][0].transcript.trim();
-        if(!text) {{
-          setMicReady('⚠️ 沒有聽到內容 — 請再試一次');
-          return;
+        function setMicReady(message) {{
+          listening = false;
+          mic.disabled = false;
+          mic.style.background = '#E65100';
+          mic.textContent = '🎤 按此說話 (Tap & Say)';
+          status.textContent = message || '點擊上方按鈕並講出名稱';
         }}
-        answer.value = text;
-        display.textContent = text;
-        setMicReady('✅ 聽到: ' + text);
-      }};
 
-      recognition.onerror = (event) => {{
-        setMicReady('⚠️ 未能識別 (' + event.error + ') — 請再試一次');
-      }};
+        if(SR) {{
+          recognition = new SR();
+          recognition.lang = 'zh-HK';
+          recognition.continuous = false;
+          recognition.interimResults = false;
 
-      recognition.onend = () => {{
-        if(listening) setMicReady();
-      }};
-    }} else {{
-      mic.disabled = true;
-      status.textContent = '❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)';
-    }}
+          recognition.onstart = () => {{
+            listening = true;
+            mic.style.background = '#D32F2F';
+            mic.textContent = '⏹️ 正在聆聽中... (Listening)';
+            status.textContent = '🔴 正在聆聽中，請講話...';
+          }};
 
-    mic.onclick = () => {{
-      if(!recognition) return;
-      if(listening) {{
-        recognition.stop();
-        return;
-      }}
-      try {{
-        recognition.start();
-      }} catch(e) {{
-        setMicReady('⚠️ 麥克風未能啟動 — 請再試一次');
-      }}
-    }};
+          recognition.onresult = (event) => {{
+            const text = event.results[0][0].transcript.trim();
+            if(!text) {{
+              setMicReady('⚠️ 沒有聽到內容 — 請再試一次');
+              return;
+            }}
+            answer.value = text;
+            display.textContent = text;
+            setMicReady('✅ 聽到: ' + text);
+          }};
 
-    document.getElementById('submit').onclick = (e) => {{
-      e.preventDefault();
-      go('answer_submission', answer.value);
-    }};
+          recognition.onerror = (event) => {{
+            setMicReady('⚠️ 未能識別 (' + event.error + ') — 請再試一次');
+          }};
 
-    document.getElementById('skip').onclick = (e) => {{
-      e.preventDefault();
-      go('skip_item', '1');
-    }};
-    </script></body></html>
-    """,
-        height=470,
-        key=f"voice_component_{index}"  # <--- THIS SPECIFIC LINE FIXES THE EMOJI/STAGE STICKINESS
-    )
+          recognition.onend = () => {{
+            if(listening) setMicReady();
+          }};
+        }} else {{
+          mic.disabled = true;
+          status.textContent = '❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)';
+        }}
+
+        mic.onclick = () => {{
+          if(!recognition) return;
+          if(listening) {{
+            recognition.stop();
+            return;
+          }}
+          try {{
+            recognition.start();
+          }} catch(e) {{
+            setMicReady('⚠️ 麥克風未能啟動 — 請再試一次');
+          }}
+        }};
+
+        document.getElementById('submit').onclick = (e) => {{
+          e.preventDefault();
+          go('answer_submission', answer.value);
+        }};
+
+        document.getElementById('skip').onclick = (e) => {{
+          e.preventDefault();
+          go('skip_item', '1');
+        }};
+        </script></body></html>
+        """,
+            height=470,
+        )
 
 # STAGE 3: COMPLETE
 elif st.session_state.stage == "complete":
