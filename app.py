@@ -157,10 +157,9 @@ elif st.session_state.stage == "gameplay":
         transcript = st.query_params["speech_result"]
         # Clear query parameters immediately so old results don't linger
         st.query_params.clear()
-        # Set text input value directly in session state
+        # Set text input value directly in session state so it populates the text box
         st.session_state[current_key] = transcript
-        # Evaluate answer immediately
-        evaluate_cantonese_speech(transcript)
+        # Rerun to update input widget without auto-submitting yet
         st.rerun()
 
     # Helper function to advance question safely
