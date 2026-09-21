@@ -271,7 +271,7 @@ elif st.session_state.stage == "gameplay":
     # Input text box synced dynamically per question
     manual_input = st.text_input(
         "識別結果 / 手動輸入 (Recognized Text / Manual Input):", 
-        key=current_key
+        key=transcript
     )
 
     col1, col2 = st.columns(2)
