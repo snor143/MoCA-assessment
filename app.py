@@ -1,5 +1,3 @@
-!pip install streamlit
-
 import streamlit as st
 import time
 import pandas as pd
