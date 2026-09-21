@@ -18,6 +18,7 @@ st.markdown("""
 for name, default in {
     "stage": "intro", "current_item_index": 0, "telemetry_logs": [],
     "item_start_time": None, "moca_naming_score": 0,
+    "answer_revision": 0, "last_transcript": "",
 }.items():
     if name not in st.session_state:
         st.session_state[name] = default
@@ -60,28 +61,35 @@ if st.session_state.stage == "intro":
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
+        st.session_state.answer_revision = 0
+        st.session_state.last_transcript = ""
         st.session_state.item_start_time = time.time()
         st.query_params.clear()
         st.rerun()
 
 elif st.session_state.stage == "gameplay":
     index = st.session_state.current_item_index
-    current_key = f"manual_in_{index}"
 
-    # Read the result before creating the widget. Keep it in a separate pending
-    # value, then assign the widget key and rerun so Streamlit hydrates the
-    # browser input with the transcript instead of its previous empty value.
-    transcript = st.query_params.get("speech_result")
+    # A new widget key is deliberately created for every voice result. This
+    # prevents Streamlit's already-mounted text_input from restoring its old
+    # browser value over the newly received transcript.
+    transcript = st.query_params.get("speech_result", "")
     if transcript:
-        st.session_state[current_key] = str(transcript)
-        st.session_state.last_transcript = str(transcript)
+        transcript = str(transcript)
+        st.session_state.last_transcript = transcript
+        st.session_state.answer_revision += 1
         st.query_params.clear()
         st.rerun()
+
+    current_key = f"manual_in_{index}_{st.session_state.answer_revision}"
+    if st.session_state.last_transcript:
+        st.session_state[current_key] = st.session_state.last_transcript
 
     def advance_to_next_item():
         st.session_state.show_tick_feedback = False
         st.session_state.pending_advance = False
-        st.session_state.pop("last_transcript", None)
+        st.session_state.last_transcript = ""
+        st.session_state.answer_revision += 1
         st.query_params.clear()
         if index + 1 < len(ITEMS):
             st.session_state.current_item_index += 1
@@ -102,12 +110,13 @@ elif st.session_state.stage == "gameplay":
     st.markdown("<p style='text-align:center;font-size:18px;color:#2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係雞」）</p>", unsafe_allow_html=True)
     st.markdown(f"<div style='font-size:130px;text-align:center;margin:10px 0;'>{item['emoji']}</div>", unsafe_allow_html=True)
 
-    if st.session_state.get("last_transcript"):
+    if st.session_state.last_transcript:
         st.info(f"🎤 語音辨識結果：{st.session_state.last_transcript}")
 
     components.html(f"""
     <!DOCTYPE html><html><head><meta charset="utf-8"><style>
     .mic-btn {{ width:100%; height:85px; font-size:24px; font-weight:bold; background:#E65100; color:white; border:0; border-radius:18px; cursor:pointer; box-shadow:0 4px 8px rgba(0,0,0,.15); }}
+    .mic-btn:disabled {{ opacity: .85; cursor: wait; }}
     .status-text {{ font-size:20px; font-family:sans-serif; color:#333; text-align:center; margin-top:10px; }}
     </style></head><body>
     <button class="mic-btn" id="start-btn" type="button">🎤 按此說話 (Tap & Say "呢個係...")</button>
@@ -119,9 +128,11 @@ elif st.session_state.stage == "gameplay":
     let recognition = null;
     let active = false;
     let gotResult = false;
+    let navigating = false;
 
     function ready(message) {{
-      active = false; gotResult = false;
+      active = false;
+      gotResult = false;
       button.disabled = false;
       button.style.pointerEvents = 'auto';
       button.style.backgroundColor = '#E65100';
@@ -134,31 +145,43 @@ elif st.session_state.stage == "gameplay":
       recognition.lang = 'zh-HK';
       recognition.continuous = false;
       recognition.interimResults = false;
+
       recognition.onstart = function() {{
-        active = true; gotResult = false;
+        active = true;
+        gotResult = false;
         button.disabled = false;
         button.style.pointerEvents = 'auto';
         button.style.backgroundColor = '#D32F2F';
         button.innerHTML = '⏹️ 停止聆聽 (Stop)';
         status.textContent = '🔴 正在聆聽中，請講話... (Listening...)';
       }};
+
       recognition.onresult = function(event) {{
-        gotResult = true; active = false;
-        const text = event.results[0][0].transcript;
-        status.textContent = '✅ 聽到: ' + text;
+        gotResult = true;
+        active = false;
+        const text = event.results[0][0].transcript.trim();
+        status.textContent = text ? '✅ 聽到: ' + text : '⚠️ 沒有聽到內容';
         button.style.backgroundColor = '#388E3C';
+        if (!text) {{ ready('⚠️ 沒有聽到內容 — 請再試一次'); return; }}
+
+        // Navigate the parent Streamlit page with the transcript. The Python
+        // code consumes this once, creates a fresh input key, and reruns.
+        navigating = true;
         const url = new URL(window.parent.location.href);
         url.searchParams.set('speech_result', text);
         window.parent.location.assign(url.toString());
       }};
+
       recognition.onerror = function(event) {{
         active = false;
+        navigating = false;
         ready('⚠️ 未能識別 (' + event.error + ') — 請再試一次');
       }};
+
       recognition.onend = function() {{
-        // A failed/no-speech session must never remain labelled Listening.
-        // If a result was received, the parent navigation is already underway.
-        if (!gotResult) ready();
+        // No-speech, aborted, and other failed sessions must never remain
+        // labelled Listening. Successful results are being navigated.
+        if (!gotResult && !navigating) ready();
       }};
     }} else {{
       button.disabled = true;
@@ -168,6 +191,7 @@ elif st.session_state.stage == "gameplay":
     button.addEventListener('click', function() {{
       if (!recognition) return;
       if (active) {{ recognition.stop(); return; }}
+      navigating = false;
       ready();
       try {{ recognition.start(); }}
       catch (error) {{ ready('⚠️ 麥克風未能啟動 — 請再試一次'); }}
@@ -184,7 +208,8 @@ elif st.session_state.stage == "gameplay":
     col1, col2 = st.columns(2)
     with col1:
         if st.button("👉 提交答案 / 下一題 (Submit / Next)", key=f"btn_next_{index}"):
-            evaluate_cantonese_speech(manual_input if manual_input.strip() else "未有說話")
+            # The value here comes from either speech recognition or manual entry.
+            evaluate_cantonese_speech(manual_input.strip() or "未有說話")
             st.rerun()
     with col2:
         if st.button("⏭️ 跳過 (Skip Item)", key=f"btn_skip_{index}"):
@@ -200,6 +225,8 @@ elif st.session_state.stage == "complete":
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
+        st.session_state.answer_revision = 0
+        st.session_state.last_transcript = ""
         st.query_params.clear()
         st.rerun()
     st.markdown("---")
