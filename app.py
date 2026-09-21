@@ -91,7 +91,6 @@ elif st.session_state.stage == "gameplay":
         st.rerun()
 
     item = ITEMS[index]
-    initial = html.escape(st.session_state.last_transcript, quote=True)
     displayed = html.escape(st.session_state.last_transcript or "尚未有語音結果")
     st.markdown(f"<p style='font-size:22px;text-align:center;color:#666;'>進度: {index+1} / {len(ITEMS)}</p>", unsafe_allow_html=True)
     st.markdown("<h2 style='text-align:center;'>請大聲講出，這是什麼動物？</h2>", unsafe_allow_html=True)
@@ -100,37 +99,60 @@ elif st.session_state.stage == "gameplay":
 
     components.html(f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
-    body{{margin:0;font-family:sans-serif}}button{{width:100%;height:70px;font-size:22px;font-weight:bold;color:white;border:0;border-radius:16px;cursor:pointer;margin-bottom:10px}}#mic{{background:#E65100}}#submit{{background:#2E7D32}}#skip{{background:#607D8B}}button:disabled{{opacity:0.65;cursor:wait}}.status{{font-size:20px;text-align:center;min-height:30px;margin:8px 0}}.display{{background:#E8F5E9;padding:12px;border-radius:12px;font-size:20px;margin:10px 0}}label{{display:block;font-size:18px;margin:10px 0 6px}}textarea{{box-sizing:border-box;width:100%;min-height:70px;padding:12px;font-size:22px;border:2px solid #4CAF50;border-radius:12px;resize:vertical}}    </style></head><body>
+    body{{margin:0;font-family:sans-serif}}button{{width:100%;height:70px;font-size:22px;font-weight:bold;color:white;border:0;border-radius:16px;cursor:pointer;margin-bottom:10px}}#mic{{background:#E65100}}button:disabled{{opacity:0.65;cursor:wait}}.status{{font-size:20px;text-align:center;min-height:30px;margin:8px 0}}.display{{background:#E8F5E9;padding:12px;border-radius:12px;font-size:20px;margin:10px 0}}    </style></head><body>
     <button id="mic" type="button">🎤 按此說話 (Tap & Say)</button>
     <div class="status" id="status">點擊上方按鈕並講出名稱</div>
     <div class="display">🎤 語音結果：<span id="display">{displayed}</span></div>
-    <label for="answer">答案（可修改或手動輸入）：</label>
-    <textarea id="answer" placeholder="語音結果會顯示在這裡；也可以手動輸入">{initial}</textarea>
-    <button id="submit" type="button">👉 提交答案 / 下一題</button>
-    <button id="skip" type="button">⏭️ 跳過</button>
     <script>
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    const mic=document.getElementById('mic'), status=document.getElementById('status'), answer=document.getElementById('answer'), display=document.getElementById('display');
+    const mic=document.getElementById('mic'), status=document.getElementById('status'), display=document.getElementById('display');
     let recognition=null, listening=false, navigating=false;
     function go(name,value) {{
-      const url=new URL(window.parent.location.href);
+      const url=new URL(window.top.location.href);
       url.search='';
       url.searchParams.set(name,value);
-      window.parent.location.assign(url.toString());
+      window.top.location.href=url.toString();
     }}
     function ready(message) {{ listening=false; mic.disabled=false; mic.style.background='#E65100'; mic.textContent='🎤 按此說話 (Tap & Say)'; status.textContent=message||'點擊上方按鈕並講出名稱'; }}
     if(SR) {{
       recognition=new SR(); recognition.lang='zh-HK'; recognition.continuous=false; recognition.interimResults=false;
       recognition.onstart=()=>{{ listening=true; mic.style.background='#D32F2F'; mic.textContent='⏹️ 停止聆聽 (Stop)'; status.textContent='🔴 正在聆聽中，請講話...'; }};
-      recognition.onresult=(event)=>{{ const text=event.results[0][0].transcript.trim(); if(!text){{ready('⚠️ 沒有聽到內容 — 請再試一次');return}} listening=false; navigating=true; answer.value=text; display.textContent=text; status.textContent='✅ 已取得語音結果，請確認後提交'; mic.style.background='#388E3C'; go('speech_result',text); }};
+      recognition.onresult=(event)=>{{ const text=event.results[0][0].transcript.trim(); if(!text){{ready('⚠️ 沒有聽到內容 — 請再試一次');return}} listening=false; navigating=true; display.textContent=text; status.textContent='✅ 已取得語音結果，請確認後提交'; mic.style.background='#388E3C'; go('speech_result',text); }};
       recognition.onerror=(event)=>{{ navigating=false; ready('⚠️ 未能識別 ('+event.error+') — 請再試一次'); }};
       recognition.onend=()=>{{ if(!navigating) ready(); }};
     }} else {{ mic.disabled=true; status.textContent='❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)'; }}
     mic.onclick=()=>{{ if(!recognition)return; if(listening){{recognition.stop();return}} navigating=false; ready(); try{{recognition.start()}}catch(e){{ready('⚠️ 麥克風未能啟動 — 請再試一次');}} }};
-    document.getElementById('submit').onclick=()=>{{ go('answer_submission',answer.value); }};
-    document.getElementById('skip').onclick=()=>{{ go('skip_item','1'); }};
     </script></body></html>
-    """, height=470)
+    """, height=300)
+
+    st.write("")
+    answer_input = st.text_area(
+        "答案（可修改或手動輸入）：",
+        value=st.session_state.last_transcript,
+        height=100,
+        key="manual_answer",
+    )
+    st.session_state.last_transcript = answer_input
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("👉 提交答案 / 下一題"):
+            st.session_state.last_transcript = answer_input
+            answer = str(answer_input).strip() or ""
+            correct = evaluate_answer(answer)
+            if correct:
+                st.success("✅ 正確！ (Correct!)", icon="✅")
+                time.sleep(0.8)
+            advance_item()
+            st.rerun()
+    with col2:
+        if st.button("⏭️ 跳過"):
+            correct = evaluate_answer("跳過")
+            if correct:
+                st.success("✅ 正確！ (Correct!)", icon="✅")
+                time.sleep(0.8)
+            advance_item()
+            st.rerun()
 
 elif st.session_state.stage == "complete":
     st.balloons(); st.title("🎉 完成任務！感謝您的幫忙！")
