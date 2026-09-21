@@ -1,3 +1,4 @@
+import html
 import time
 from datetime import datetime
 
@@ -30,7 +31,9 @@ for key, value in {
     "telemetry_logs": [],
     "item_start_time": None,
     "moca_naming_score": 0,
+    "last_transcript": "",
     "manual_answer": "",
+    "voice_ready": False,
 }.items():
     if key not in st.session_state:
         st.session_state[key] = value
@@ -95,8 +98,29 @@ def evaluate_answer(answer):
     return correct
 
 
+def record_skip():
+    item = ITEMS[st.session_state.current_item_index]
+    elapsed = (
+        round(time.time() - st.session_state.item_start_time, 2)
+        if st.session_state.item_start_time
+        else 0.0
+    )
+    st.session_state.telemetry_logs.append(
+        {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "item_id": item["id"],
+            "target_name": item["primary_name"],
+            "user_spoken_raw": "",
+            "is_correct": False,
+            "speech_latency_seconds": elapsed,
+        }
+    )
+
+
 def reset_answer_state():
+    st.session_state.last_transcript = ""
     st.session_state.manual_answer = ""
+    st.session_state.voice_ready = False
 
 
 def advance_item():
@@ -133,11 +157,24 @@ if st.session_state.stage == "intro":
         st.session_state.moca_naming_score = 0
         st.session_state.item_start_time = time.time()
         reset_answer_state()
+        st.query_params.clear()
         st.rerun()
 
 elif st.session_state.stage == "gameplay":
+    # The browser SpeechRecognition API is used by Chrome's speech service and
+    # returns the Cantonese transcript to Streamlit through this query parameter.
+    voice_result = st.query_params.get("voice_answer")
+    if voice_result is not None:
+        transcript_text = str(voice_result).strip()
+        st.session_state.last_transcript = transcript_text
+        st.session_state.manual_answer = transcript_text
+        st.session_state.voice_ready = bool(transcript_text)
+        st.query_params.clear()
+        st.rerun()
+
     index = st.session_state.current_item_index
     item = ITEMS[index]
+    displayed = html.escape(st.session_state.last_transcript or "尚未有語音結果")
 
     st.markdown(
         f"<p style='font-size:22px;text-align:center;color:#666;'>進度: {index + 1} / {len(ITEMS)}</p>",
@@ -152,52 +189,112 @@ elif st.session_state.stage == "gameplay":
         unsafe_allow_html=True,
     )
 
-    st.info(
-        "請先按下方按鈕，再按手機／平板鍵盤上的 🎙️ 麥克風，直接說出答案。"
+    # This is a browser microphone button. Chrome uses its Google speech
+    # recognition service when available; it does not require a Google API key.
+    components.html(
+        f"""
+        <!doctype html>
+        <html><head><meta charset="utf-8"><style>
+        body {{ margin:0; font-family:sans-serif; }}
+        button {{ width:100%; height:70px; font-size:22px; font-weight:bold; color:white;
+          border:0; border-radius:16px; cursor:pointer; margin-bottom:10px; }}
+        #mic {{ background:#E65100; }}
+        .status, .display {{ font-size:18px; text-align:center; margin:8px 0; color:#555; }}
+        </style></head><body>
+        <button id="mic" type="button">🎙️ 按此啟用 Google 語音 (Start Microphone)</button>
+        <div class="status" id="status">按一下按鈕，允許麥克風，然後說出答案</div>
+        <div class="display">語音結果：<span id="display">{displayed}</span></div>
+        <script>
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const mic = document.getElementById('mic');
+        const status = document.getElementById('status');
+        const display = document.getElementById('display');
+        let recognition = null;
+        let listening = false;
+
+        function sendTranscript(text) {{
+          const url = new URL(window.parent.location.href);
+          url.search = '';
+          url.searchParams.set('voice_answer', text);
+          window.parent.location.assign(url.toString());
+        }}
+
+        function resetButton(message) {{
+          listening = false;
+          mic.disabled = false;
+          mic.style.background = '#E65100';
+          mic.textContent = '🎙️ 按此啟用 Google 語音 (Start Microphone)';
+          status.textContent = message || '按一下按鈕，然後說出答案';
+        }}
+
+        if (SpeechRecognition) {{
+          recognition = new SpeechRecognition();
+          recognition.lang = 'zh-HK';
+          recognition.continuous = false;
+          recognition.interimResults = false;
+          recognition.maxAlternatives = 1;
+
+          recognition.onstart = () => {{
+            listening = true;
+            mic.style.background = '#D32F2F';
+            mic.textContent = '⏹️ 正在聆聽...';
+            status.textContent = '🔴 請說出動物名稱';
+          }};
+
+          recognition.onresult = (event) => {{
+            const text = event.results[0][0].transcript.trim();
+            if (!text) {{ resetButton('⚠️ 沒有聽到內容，請再試一次'); return; }}
+            display.textContent = text;
+            status.textContent = '✅ 已轉換成文字，正在填入答案欄...';
+            sendTranscript(text);
+          }};
+
+          recognition.onerror = (event) => {{
+            const message = event.error === 'not-allowed'
+              ? '⚠️ 請在瀏覽器允許此網站使用麥克風'
+              : '⚠️ 語音辨識失敗（' + event.error + '），請再試一次';
+            resetButton(message);
+          }};
+          recognition.onend = () => {{ if (!listening) resetButton(); }};
+        }} else {{
+          mic.disabled = true;
+          status.textContent = '❌ 請使用最新版 Chrome 或 Safari';
+        }}
+
+        mic.onclick = () => {{
+          if (!recognition) return;
+          if (listening) {{ recognition.stop(); return; }}
+          try {{ recognition.start(); }}
+          catch (error) {{ resetButton('⚠️ 麥克風未能啟動，請再試一次'); }}
+        }};
+        </script></body></html>
+        """,
+        height=230,
     )
+
     answer_input = st.text_area(
-        "答案（可修改或手動輸入）：",
+        "答案（語音文字可修改）：",
         height=100,
         key="manual_answer",
-        placeholder="按「開啟鍵盤麥克風」後，使用鍵盤的 🎙️ 說出答案",
+        placeholder="按上方按鈕說話，文字會顯示在這裡",
     )
+    st.session_state.last_transcript = answer_input
 
-    # This button only focuses the Streamlit text area. The operating system's
-    # keyboard microphone must be activated by the user; browsers do not allow
-    # a webpage to turn on the device microphone or keyboard dictation silently.
-    components.html(
-        """
-        <button id="focus-answer" type="button">🎙️ 開啟鍵盤麥克風 (Use Keyboard Mic)</button>
-        <div id="focus-status" style="font:18px sans-serif;text-align:center;margin-top:8px;color:#555;">
-          按鍵盤上的 🎙️，然後直接說出答案
-        </div>
-        <script>
-        const button = document.getElementById('focus-answer');
-        const status = document.getElementById('focus-status');
-        button.style.cssText = 'width:100%;height:70px;font-size:22px;font-weight:bold;color:white;background:#E65100;border:0;border-radius:16px;cursor:pointer;';
-        button.onclick = () => {
-          const parent = window.parent.document;
-          const textarea = parent.querySelector('textarea[aria-label="答案（可修改或手動輸入）："]') || parent.querySelector('textarea');
-          if (textarea) {
-            textarea.focus();
-            textarea.click();
-            status.textContent = '✅ 已選取答案欄位，請按鍵盤上的 🎙️ 並說話';
-          } else {
-            status.textContent = '請按一下答案欄位，再按鍵盤上的 🎙️';
-          }
-        };
-        </script>
-        """,
-        height=115,
-    )
+    if st.session_state.voice_ready:
+        st.success("已將語音轉成文字並填入答案欄，請提交或按下一題。")
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("👉 提交答案 / 下一題"):
+        if st.button("✅ 提交答案"):
             finish_answer(answer_input)
     with col2:
+        if st.button("➡️ 下一題"):
+            finish_answer(answer_input)
+    with col3:
         if st.button("⏭️ 跳過"):
-            finish_answer("跳過")
+            record_skip()
+            advance_item()
+            st.rerun()
 
 elif st.session_state.stage == "complete":
     st.balloons()
@@ -228,4 +325,5 @@ elif st.session_state.stage == "complete":
         st.session_state.moca_naming_score = 0
         st.session_state.item_start_time = time.time()
         reset_answer_state()
+        st.query_params.clear()
         st.rerun()
