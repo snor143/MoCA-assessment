@@ -70,25 +70,25 @@ ITEMS = [
     {
         "id": "item_1",
         "tier": "High Familiarity (Warmup)",
-        "emoji": "🍊",
-        "primary_name": "鮮橙",
-        "acceptable_synonyms": ["橙", "鮮橙", "橙仔", "香橙", "新奇士橙"],
+        "emoji": "🐓",
+        "primary_name": "雞",
+        "acceptable_synonyms": ["雞", "公雞", "母雞", "雞仔"],
         "moca_weight": 1
     },
     {
         "id": "item_2",
         "tier": "Moderate Familiarity",
-        "emoji": "🥒",
-        "primary_name": "苦瓜",
-        "acceptable_synonyms": ["苦瓜", "涼瓜", "青瓜"],
+        "emoji": "🐙",
+        "primary_name": "八爪魚",
+        "acceptable_synonyms": ["八爪魚"],
         "moca_weight": 1
     },
     {
         "id": "item_3",
         "tier": "Low Familiarity (MoCA Rhino Equivalent)",
-        "emoji": "⭐",
-        "primary_name": "楊桃",
-        "acceptable_synonyms": ["楊桃", "洋桃", "五棱子"],
+        "emoji": "🦥",
+        "primary_name": "樹懶",
+        "acceptable_synonyms": ["樹懶"],
         "moca_weight": 1
     }
 ]
@@ -146,38 +146,45 @@ if st.session_state.stage == "intro":
 elif st.session_state.stage == "gameplay":
     current_item = ITEMS[st.session_state.current_item_index]
     
+    # Check if a voice result was passed via URL query parameters
+    if "voice_result" in st.query_params:
+        spoken_text = st.query_params["voice_result"]
+        # Clear query param
+        del st.query_params["voice_result"]
+        # Process answer
+        evaluate_cantonese_speech(spoken_text)
+        st.rerun()
+
     st.markdown(f"<p style='font-size: 22px; text-align: center; color: #666;'>進度: {st.session_state.current_item_index + 1} / {len(ITEMS)}</p>", unsafe_allow_html=True)
     st.markdown("<h2 style='text-align: center;'>請大聲講出，這是什麼食材？</h2>", unsafe_allow_html=True)
     
-    # Central visual stimulus
+    # Visual stimulus
     st.markdown(f"<div style='font-size: 140px; text-align: center; margin: 10px 0;'>{current_item['emoji']}</div>", unsafe_allow_html=True)
     
-    # Browser Speech Recognition Component (zh-HK)
     st.markdown("### 🎙️ 廣東話語音輸入 (Cantonese Speech Input):")
     
-    # Web Speech API HTML/JS Component
+    # Web Speech API HTML/JS Component with Direct URL Redirect
     components.html(
-        """
+        f"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="utf-8">
             <style>
-                .mic-btn {
+                .mic-btn {{
                     width: 100%;
-                    height: 90px;
-                    font-size: 26px;
+                    height: 80px;
+                    font-size: 24px;
                     font-weight: bold;
                     background-color: #E65100;
                     color: white;
                     border: none;
-                    border-radius: 20px;
+                    border-radius: 16px;
                     cursor: pointer;
-                    margin-bottom: 15px;
-                    box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
-                }
-                .mic-btn:active { background-color: #BF360C; }
-                .status-text { font-size: 20px; font-family: sans-serif; color: #333; text-align: center; }
+                    margin-bottom: 10px;
+                }}
+                .mic-btn:active {{ background-color: #BF360C; }}
+                .status-text {{ font-size: 20px; font-family: sans-serif; color: #333; text-align: center; margin-top: 5px; }}
             </style>
         </head>
         <body>
@@ -186,65 +193,63 @@ elif st.session_state.stage == "gameplay":
 
             <script>
                 var recognition;
-                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {{
                     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                     recognition = new SpeechRecognition();
-                    recognition.lang = 'zh-HK'; // Hong Kong Cantonese Speech Recognition
+                    recognition.lang = 'zh-HK';
                     recognition.continuous = false;
                     recognition.interimResults = false;
 
-                    recognition.onstart = function() {
+                    recognition.onstart = function() {{
                         document.getElementById('status').innerHTML = "🔴 正在聆聽中，請講話... (Listening...)";
                         document.getElementById('start-btn').style.backgroundColor = "#D32F2F";
-                    };
+                    }};
 
-                    recognition.onresult = function(event) {
+                    recognition.onresult = function(event) {{
                         var transcript = event.results[0][0].transcript;
-                        document.getElementById('status').innerHTML = "✅ 聽到: <b>" + transcript + "</b>";
+                        document.getElementById('status').innerHTML = "✅ 聽到: <b>" + transcript + "</b> (正在提交...)";
                         document.getElementById('start-btn').style.backgroundColor = "#388E3C";
                         
-                        // Pass Cantonese speech transcript back to parent Streamlit frame
-                        window.parent.postMessage({
-                            type: "streamlit:setComponentValue",
-                            value: transcript
-                        }, "*");
-                    };
+                        // Pass transcript directly back to Streamlit via top window URL
+                        setTimeout(function() {{
+                            window.top.location.href = window.top.location.pathname + "?voice_result=" + encodeURIComponent(transcript);
+                        }}, 800);
+                    }};
 
-                    recognition.onerror = function(event) {
+                    recognition.onerror = function(event) {{
                         document.getElementById('status').innerHTML = "⚠️ 未能識別，請再試一次 (Error: " + event.error + ")";
                         document.getElementById('start-btn').style.backgroundColor = "#E65100";
-                    };
+                    }};
+                }} else {{
+                    document.getElementById('status').innerHTML = "❌ 您的瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)";
+                }}
 
-                    recognition.onend = function() {
-                        document.getElementById('start-btn').innerText = "🎤 再次說話 (Speak Again)";
-                    };
-                } else {
-                    document.getElementById('status').innerHTML = "❌ 您的瀏覽器不支援語音功能 (Use Chrome/Safari)";
-                }
-
-                function startRecognition() {
-                    if (recognition) {
+                function startRecognition() {{
+                    if (recognition) {{
                         recognition.start();
-                    }
-                }
+                    }}
+                }}
             </script>
         </body>
         </html>
         """,
-        height=180
+        height=160
     )
 
-    # Input text box fallback / display
-    spoken_input = st.text_input("或直接輸入/確認錄音文字 (Spoken Text Input):", key=f"speech_input_{st.session_state.current_item_index}")
+    st.markdown("---")
+    st.markdown("##### 備用輸入 (Manual / Keyboard Dictation Fallback):")
+    
+    # Manual text input backup
+    manual_input = st.text_input("如錄音不成功，可在此輸入或用 iPad 鍵盤語音輸入:", key=f"manual_in_{st.session_state.current_item_index}")
     
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("確認答案 (Submit Speech Answer)"):
-            if spoken_input:
-                evaluate_cantonese_speech(spoken_input)
+        if st.button("提交文字答案 (Submit Manual Answer)"):
+            if manual_input:
+                evaluate_cantonese_speech(manual_input)
                 st.rerun()
             else:
-                st.warning("請先按麥克風說話或輸入答案！")
+                st.warning("請先輸入答案或使用上方麥克風！")
     with col2:
         if st.button("跳過 / 不知道 (Skip Item)"):
             evaluate_cantonese_speech("不知道")
