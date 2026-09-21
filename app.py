@@ -25,7 +25,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# 1. Initialize Default Session State
+# 1. Initialize Session State
 for key, value in {
     "stage": "intro",
     "current_item_index": 0,
@@ -37,7 +37,7 @@ for key, value in {
     if key not in st.session_state:
         st.session_state[key] = value
 
-# 2. State Recovery: Prevent hard browser reloads from resetting progress
+# 2. State Recovery: Recover progress after query param reload
 if any(
     k in st.query_params
     for k in ["answer_submission", "skip_item", "speech_result"]
@@ -182,9 +182,9 @@ elif st.session_state.stage == "gameplay":
         unsafe_allow_html=True,
     )
 
-    # Note the key=f"voice_comp_{index}" to force a clean iframe per question
     components.html(
         f"""
+    <!-- item_id_{index} -->
     <!doctype html><html><head><meta charset="utf-8"><style>
     body{{margin:0;font-family:sans-serif}}
     button{{width:100%;height:70px;font-size:22px;font-weight:bold;color:white;border:0;border-radius:16px;cursor:pointer;margin-bottom:10px}}
@@ -210,11 +210,14 @@ elif st.session_state.stage == "gameplay":
     let recognition=null, listening=false, navigating=false;
 
     function go(name,value) {{
-      const url=new URL(window.top.location.href);
-      url.search='';
-      url.searchParams.set(name,value);
-      url.searchParams.set('item_idx','{index}');
-      window.top.location.href=url.toString();
+      let urlStr = window.location.href;
+      try {{ urlStr = window.top.location.href; }} catch(e) {{}}
+      const url = new URL(urlStr);
+      url.search = '';
+      url.searchParams.set(name, value);
+      url.searchParams.set('item_idx', '{index}');
+      try {{ window.top.location.href = url.toString(); }} 
+      catch(e) {{ window.location.href = url.toString(); }}
     }}
 
     function ready(message) {{
@@ -276,7 +279,6 @@ elif st.session_state.stage == "gameplay":
     </script></body></html>
     """,
         height=470,
-        key=f"voice_comp_{index}",
     )
 
 # STAGE 3: COMPLETE
