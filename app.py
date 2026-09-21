@@ -13,13 +13,14 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# FIXED CSS: Ensures ALL Streamlit buttons have solid backgrounds
 st.markdown(
     """
 <style>
 .main { background-color:#FFFDF9; }
 .instruction-card { background:#F0F7F4; padding:24px; border-radius:16px; border-left:8px solid #2E7D32; margin-bottom:24px; }
 
-/* Custom Native Streamlit Button Styling */
+/* Default styling for ALL Streamlit buttons (Start, Play Again, Submit) */
 div.stButton > button {
     width: 100% !important;
     height: 65px !important;
@@ -27,19 +28,17 @@ div.stButton > button {
     font-weight: bold !important;
     border-radius: 16px !important;
     border: 0 !important;
+    background-color: #2E7D32 !important;
     color: white !important;
     margin-top: 10px !important;
 }
 
-/* Submit Button Style */
-div[data-testid="stColumn"]:nth-child(1) div.stButton > button {
-    background-color: #2E7D32 !important;
-}
-div[data-testid="stColumn"]:nth-child(1) div.stButton > button:hover {
+div.stButton > button:hover {
     background-color: #1B5E20 !important;
+    color: white !important;
 }
 
-/* Skip Button Style */
+/* Specific styling for Skip Button (Column 2) */
 div[data-testid="stColumn"]:nth-child(2) div.stButton > button {
     background-color: #607D8B !important;
 }
@@ -51,6 +50,7 @@ div[data-testid="stColumn"]:nth-child(2) div.stButton > button:hover {
     unsafe_allow_html=True,
 )
 
+# Session State Initialization
 for key, value in {
     "stage": "intro",
     "current_item_index": 0,
@@ -128,6 +128,7 @@ def advance_item():
         st.session_state.stage = "complete"
 
 
+# STAGE 1: INTRO
 if st.session_state.stage == "intro":
     st.title("🛒 香港街市語音買菜 (HK Market Voice Explorer)")
     st.markdown(
@@ -149,10 +150,11 @@ if st.session_state.stage == "intro":
         st.query_params.clear()
         st.rerun()
 
+# STAGE 2: GAMEPLAY
 elif st.session_state.stage == "gameplay":
     index = st.session_state.current_item_index
 
-    # Receive transcript or manual edit updates from HTML component
+    # Check for speech recognition or input updates from iframe
     if "speech_result" in st.query_params:
         transcript = str(st.query_params["speech_result"])
         st.query_params.clear()
@@ -180,7 +182,7 @@ elif st.session_state.stage == "gameplay":
         unsafe_allow_html=True,
     )
 
-    # HTML Component: Voice Recognition + HTML Textarea with auto-sync
+    # HTML Component: Voice Recognition + Auto-sync Textarea
     components.html(
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
@@ -203,11 +205,17 @@ elif st.session_state.stage == "gameplay":
     const mic = document.getElementById('mic'), status = document.getElementById('status'), answer = document.getElementById('answer');
     let recognition = null, listening = false;
 
+    // Send data to main window URL to reload Streamlit Python state
     function syncText(text) {{
-        window.location.search = '?speech_result=' + encodeURIComponent(text);
+        const param = '?speech_result=' + encodeURIComponent(text);
+        try {{
+            window.parent.location.search = param;
+        }} catch(e) {{
+            window.location.search = param;
+        }}
     }}
 
-    // Automatically sync manual edits when user leaves textarea or presses enter
+    // Sync manual text changes when user finishes editing
     answer.onchange = () => {{
         syncText(answer.value);
     }};
@@ -271,7 +279,7 @@ elif st.session_state.stage == "gameplay":
         height=310,
     )
 
-    # Native Streamlit Buttons
+    # Native Streamlit Action Buttons
     col1, col2 = st.columns(2)
     with col1:
         if st.button("👉 提交答案 / 下一題", key=f"sub_{index}"):
@@ -293,6 +301,7 @@ elif st.session_state.stage == "gameplay":
             advance_item()
             st.rerun()
 
+# STAGE 3: COMPLETE
 elif st.session_state.stage == "complete":
     st.balloons()
     st.title("🎉 完成任務！感謝您的幫忙！")
