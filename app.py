@@ -146,80 +146,98 @@ elif st.session_state.stage == "gameplay":
         unsafe_allow_html=True,
     )
 
-    initial = html.escape(st.session_state.last_transcript, quote=True)
-    displayed = html.escape(st.session_state.last_transcript or "尚未有語音結果")
+    # Voice Recognition Component that emits standard JS input events into the parent DOM
+    components.html(
+        f"""
+    <!doctype html><html><head><meta charset="utf-8"><style>
+    body {{ margin:0; font-family:sans-serif; }}
+    button {{ width:100%; height:60px; font-size:20px; font-weight:bold; color:white; background:#E65100; border:0; border-radius:12px; cursor:pointer; width:100%; }}
+    .status {{ font-size:18px; text-align:center; margin:8px 0; min-height:24px; }}
+    </style></head><body>
+    <button id="mic" type="button">🎤 按此說話 (Tap & Say)</button>
+    <div class="status" id="status">點擊上方按鈕並講出名稱</div>
 
-    # Native Streamlit Form to guarantee state progression without URL loops
-    with st.form(key=f"item_form_{index}"):
-        # Voice Recognition Component
-        components.html(
-            f"""
-        <!doctype html><html><head><meta charset="utf-8"><style>
-        body {{ margin:0; font-family:sans-serif; }}
-        button {{ width:100%; height:60px; font-size:20px; font-weight:bold; color:white; background:#E65100; border:0; border-radius:12px; cursor:pointer; width:100%; }}
-        .status {{ font-size:18px; text-align:center; margin:8px 0; min-height:24px; }}
-        </style></head><body>
-        <button id="mic" type="button">🎤 按此說話 (Tap & Say)</button>
-        <div class="status" id="status">點擊上方按鈕並講出名稱</div>
+    <script>
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const mic = document.getElementById('mic'), status = document.getElementById('status');
+    let recognition = null, listening = false;
 
-        <script>
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const mic = document.getElementById('mic'), status = document.getElementById('status');
-        let recognition = null, listening = false;
-
-        if(SR) {{
-          recognition = new SR();
-          recognition.lang = 'zh-HK';
-          recognition.continuous = false;
-          recognition.interimResults = false;
-
-          recognition.onstart = () => {{
-            listening = true;
-            mic.style.background = '#D32F2F';
-            mic.textContent = '⏹️ 正在聆聽中...';
-            status.textContent = '🔴 正在聆聽中，請講話...';
-          }};
-
-          recognition.onresult = (event) => {{
-            const text = event.results[0][0].transcript.trim();
-            status.textContent = '✅ 聽到: ' + text;
-            mic.style.background = '#2E7D32';
-            mic.textContent = '🎤 重新錄音';
-            
-            // Pass transcribed text up to Python parent text input field
-            const textAreas = window.parent.document.querySelectorAll('textarea');
-            if(textAreas.length > 0) {{
-                textAreas[0].value = text;
-                textAreas[0].dispatchEvent(new Event('input', {{ bubbles: true }}));
-            }}
-          }};
-
-          recognition.onerror = (event) => {{
-            listening = false;
-            mic.style.background = '#E65100';
-            mic.textContent = '🎤 按此說話 (Tap & Say)';
-            status.textContent = '⚠️ 未能識別，請再試一次';
-          }};
-
-          recognition.onend = () => {{ listening = false; }};
+    function injectValueIntoStreamlitWidget(text) {{
+      // Find the text input in Streamlit's main window
+      const doc = window.parent.document;
+      const inputs = doc.querySelectorAll('input[type="text"], textarea');
+      if (inputs.length > 0) {{
+        const target = inputs[0];
+        
+        // Use React's native ValueSetter to ensure Streamlit's state manager registers the value change
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype, "value"
+        ) || Object.getOwnPropertyDescriptor(
+          window.HTMLTextAreaElement.prototype, "value"
+        );
+        
+        if (nativeInputValueSetter && nativeInputValueSetter.set) {{
+          nativeInputValueSetter.set.call(target, text);
         }} else {{
-          mic.disabled = true;
-          status.textContent = '❌ 瀏覽器不支援語音功能';
+          target.value = text;
         }}
 
-        mic.onclick = () => {{
-          if(!recognition) return;
-          if(listening) {{ recognition.stop(); return; }}
-          try {{ recognition.start(); }} catch(e) {{}}
-        }};
-        </script></body></html>
-        """,
-            height=120,
-        )
+        // Dispatch React events so Streamlit knows the text box changed
+        target.dispatchEvent(new Event('input', {{ bubbles: true }}));
+        target.dispatchEvent(new Event('change', {{ bubbles: true }}));
+      }}
+    }}
 
-        user_answer = st.text_area(
-            "答案（可修改或手動輸入）：",
-            value=st.session_state.last_transcript,
+    if(SR) {{
+      recognition = new SR();
+      recognition.lang = 'zh-HK';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {{
+        listening = true;
+        mic.style.background = '#D32F2F';
+        mic.textContent = '⏹️ 正在聆聽中...';
+        status.textContent = '🔴 正在聆聽中，請講話...';
+      }};
+
+      recognition.onresult = (event) => {{
+        const text = event.results[0][0].transcript.trim();
+        status.textContent = '✅ 聽到: ' + text;
+        mic.style.background = '#2E7D32';
+        mic.textContent = '🎤 重新錄音';
+        
+        // Inject into Streamlit React widget natively
+        injectValueIntoStreamlitWidget(text);
+      }};
+
+      recognition.onerror = (event) => {{
+        listening = false;
+        mic.style.background = '#E65100';
+        mic.textContent = '🎤 按此說話 (Tap & Say)';
+        status.textContent = '⚠️ 未能識別，請再試一次';
+      }};
+
+      recognition.onend = () => {{ listening = false; }};
+    }} else {{
+      mic.disabled = true;
+      status.textContent = '❌ 瀏覽器不支援語音功能';
+    }}
+
+    mic.onclick = () => {{
+      if(!recognition) return;
+      if(listening) {{ recognition.stop(); return; }}
+      try {{ recognition.start(); }} catch(e) {{}}
+    }};
+    </script></body></html>
+    """,
+        height=110,
+    )
+
+    # Standard Streamlit Form
+    with st.form(key=f"item_form_{index}"):
+        user_answer = st.text_input(
+            "答案（語音識別結果會自動填入，也可手動輸入）：",
             key=f"user_input_{index}",
         )
 
@@ -230,7 +248,7 @@ elif st.session_state.stage == "gameplay":
             skip_btn = st.form_submit_button("⏭️ 跳過")
 
         if submit_btn:
-            correct = evaluate_answer(user_answer if user_answer else "未有說話")
+            correct = evaluate_answer(user_answer if user_answer.strip() else "未有說話")
             if correct:
                 st.success("✅ 正確！ (Correct!)", icon="✅")
                 time.sleep(0.8)
