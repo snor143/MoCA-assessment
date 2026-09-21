@@ -145,12 +145,14 @@ if st.session_state.stage == "intro":
 # --- STAGE 2: GAMEPLAY (CANTONESE VOICE RECOGNITION) ---
 elif st.session_state.stage == "gameplay":
     current_key = f"manual_in_{st.session_state.current_item_index}"
+    
+    # Initialize input box state if missing
+    if current_key not in st.session_state:
+        st.session_state[current_key] = ""
 
     def advance_to_next_item():
         st.session_state.show_tick_feedback = False
         st.session_state.pending_advance = False
-        if current_key in st.session_state:
-            del st.session_state[current_key]
 
         if st.session_state.current_item_index + 1 < len(ITEMS):
             st.session_state.current_item_index += 1
@@ -173,21 +175,13 @@ elif st.session_state.stage == "gameplay":
     st.markdown("<p style='text-align: center; font-size: 18px; color: #2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係雞」）</p>", unsafe_allow_html=True)
     st.markdown(f"<div style='font-size: 130px; text-align: center; margin: 10px 0;'>{current_item['emoji']}</div>", unsafe_allow_html=True)
 
-    # Voice Recognition Component using postMessage bridge
-    speech_recognized = components.html(
+    # Component using URL query param approach without full page reload
+    components.html(
         f"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="utf-8">
-            <script>
-                function sendToStreamlit(value) {{
-                    window.parent.postMessage({{
-                        type: "streamlit:setComponentValue",
-                        value: value
-                    }}, "*");
-                }}
-            </script>
             <style>
                 .mic-btn {{
                     width: 100%;
@@ -206,7 +200,6 @@ elif st.session_state.stage == "gameplay":
             </style>
         </head>
         <body>
-            <!-- Item Index: {st.session_state.current_item_index} -->
             <button class="mic-btn" id="start-btn" onclick="startRecognition()">🎤 按此說話 (Tap & Say "呢個係...")</button>
             <div class="status-text" id="status">點擊上方按鈕並講出名稱</div>
 
@@ -229,7 +222,11 @@ elif st.session_state.stage == "gameplay":
                         document.getElementById('status').innerHTML = "🎧 聽到: <b>" + transcript + "</b>";
                         document.getElementById('start-btn').style.backgroundColor = "#388E3C";
                         
-                        sendToStreamlit(transcript);
+                        // Pass transcript to main window without page reload
+                        window.parent.postMessage({{
+                            type: "set_transcript",
+                            text: transcript
+                        }}, "*");
                     }};
 
                     recognition.onerror = function(event) {{
@@ -252,15 +249,30 @@ elif st.session_state.stage == "gameplay":
         height=150
     )
 
-    # When new speech transcript arrives, assign it to input box state and refresh UI
-    if speech_recognized and speech_recognized != st.session_state.get(f"last_rec_{st.session_state.current_item_index}"):
-        st.session_state[f"last_rec_{st.session_state.current_item_index}"] = speech_recognized
-        st.session_state[current_key] = speech_recognized
+    # Check for incoming speech results from query parameters safely
+    if "speech_result" in st.query_params:
+        transcript = st.query_params["speech_result"]
+        st.session_state[current_key] = transcript
+        del st.query_params["speech_result"]
         st.rerun()
+
+    # JS Listener script to bridge window messages to Streamlit query params cleanly
+    st.components.v1.html("""
+        <script>
+        window.addEventListener("message", function(event) {
+            if (event.data.type === "set_transcript") {
+                const url = new URL(window.top.location.href);
+                url.searchParams.set("speech_result", event.data.text);
+                window.top.history.replaceState({}, "", url.toString());
+                window.top.dispatchEvent(new Event("popstate"));
+            }
+        });
+        </script>
+    """, height=0)
 
     st.markdown("---")
     
-    # Input widget tied to current_key
+    # Input widget tied directly to key
     manual_input = st.text_input(
         "識別結果 / 手動輸入 (Recognized Text / Manual Input):", 
         key=current_key
@@ -289,6 +301,7 @@ elif st.session_state.stage == "complete":
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
+        st.query_params.clear()
         st.rerun()
 
     st.markdown("---")
