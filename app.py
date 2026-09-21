@@ -146,23 +146,34 @@ if st.session_state.stage == "intro":
 # --- STAGE 2: GAMEPLAY (CANTONESE VOICE RECOGNITION) ---
 elif st.session_state.stage == "gameplay":
     current_key = f"manual_in_{st.session_state.current_item_index}"
-    
-    # 1. Process URL query parameters if voice recognition sent data
+
+    # Ensure key exists in session state
+    if current_key not in st.session_state:
+        st.session_state[current_key] = ""
+
+    # Catch incoming voice result from query parameters and populate input box
     if "speech_result" in st.query_params:
         transcript = st.query_params["speech_result"]
-        # Explicitly set the session state key BEFORE rendering text_input
-        st.session_state[current_key] = transcript
-        # Clear query parameters so URL stays clean
+        # Clear URL query parameters immediately
         st.query_params.clear()
+        # Set text box value in Session State
+        st.session_state[current_key] = transcript
         st.rerun()
 
     def advance_to_next_item():
         st.session_state.show_tick_feedback = False
         st.session_state.pending_advance = False
         st.query_params.clear()
+        
+        # Clear previous answer state completely
+        if current_key in st.session_state:
+            del st.session_state[current_key]
+            
         if st.session_state.current_item_index + 1 < len(ITEMS):
             st.session_state.current_item_index += 1
             st.session_state.item_start_time = time.time()
+            next_key = f"manual_in_{st.session_state.current_item_index}"
+            st.session_state[next_key] = ""
         else:
             st.session_state.stage = "complete"
 
@@ -180,10 +191,11 @@ elif st.session_state.stage == "gameplay":
     st.markdown("<p style='text-align: center; font-size: 18px; color: #2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係雞」）</p>", unsafe_allow_html=True)
     st.markdown(f"<div style='font-size: 130px; text-align: center; margin: 10px 0;'>{current_item['emoji']}</div>", unsafe_allow_html=True)
 
-    # HTML Speech Recognition Component
+    # HTML Speech Recognition Component keyed specifically to current item index
     components.html(
         f"""
         <!DOCTYPE html>
+        <!-- Item Index: {st.session_state.current_item_index} -->
         <html>
         <head>
             <meta charset="utf-8">
@@ -227,7 +239,6 @@ elif st.session_state.stage == "gameplay":
                         document.getElementById('status').innerHTML = "✅ 聽到: <b>" + transcript + "</b>";
                         document.getElementById('start-btn').style.backgroundColor = "#388E3C";
                         
-                        // Pass transcript silently via location search and reload
                         setTimeout(function() {{
                             var targetUrl = window.top.location.pathname + "?speech_result=" + encodeURIComponent(transcript);
                             window.top.location.href = targetUrl;
@@ -251,15 +262,13 @@ elif st.session_state.stage == "gameplay":
         </body>
         </html>
         """,
-        height=150
+        height=150,
+        key=f"speech_component_{st.session_state.current_item_index}"
     )
 
     st.markdown("---")
     
-    # 2. Text input initialized using current session state value
-    if current_key not in st.session_state:
-        st.session_state[current_key] = ""
-
+    # Text input box dynamically populated by speech transcript
     manual_input = st.text_input(
         "識別結果 / 手動輸入 (Recognized Text / Manual Input):", 
         key=current_key
