@@ -271,8 +271,7 @@ elif st.session_state.stage == "gameplay":
         </body>
         </html>
         """,
-        height=150,
-        key=f"speech_component_{st.session_state.current_item_index}"
+        height=150
     )
 
     st.markdown("---")
