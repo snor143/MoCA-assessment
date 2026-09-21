@@ -132,12 +132,12 @@ elif st.session_state.stage == "gameplay":
     submission = st.query_params.get("answer_submission")
     skip = st.query_params.get("skip_item")
 
-    # FIXED: Process submission/skip and clear URL parameters directly via st.query_params
+    # Process submission or skip action
     if submission is not None or skip is not None:
         answer = "跳過" if skip is not None else str(submission)
         correct = evaluate_answer(answer)
         
-        # Clear query parameters immediately before advancing state
+        # Clear query parameters
         for param in ["answer_submission", "skip_item"]:
             if param in st.query_params:
                 del st.query_params[param]
@@ -145,7 +145,7 @@ elif st.session_state.stage == "gameplay":
         if correct:
             st.success("✅ 正確！ (Correct!)", icon="✅")
             time.sleep(0.8)
-        
+            
         advance_item()
         st.rerun()
 
@@ -170,7 +170,7 @@ elif st.session_state.stage == "gameplay":
         unsafe_allow_html=True,
     )
 
-    # HTML Component with Local JS Speech Sync & Clean URL Pusher
+    # Adding dynamic key=f"voice_component_{index}" forces Streamlit to rebuild iframe for every new question
     components.html(
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
@@ -280,6 +280,7 @@ elif st.session_state.stage == "gameplay":
     </script></body></html>
     """,
         height=470,
+        key=f"voice_component_{index}"  # <--- THIS SPECIFIC LINE FIXES THE EMOJI/STAGE STICKINESS
     )
 
 # STAGE 3: COMPLETE
