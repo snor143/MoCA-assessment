@@ -152,15 +152,17 @@ if st.session_state.stage == "intro":
 elif st.session_state.stage == "gameplay":
     current_key = f"manual_in_{st.session_state.current_item_index}"
     
-    # 1. Catch incoming voice result from query parameters
+    # Ensure key exists in session state
+    if current_key not in st.session_state:
+        st.session_state[current_key] = ""
+
+    # Catch incoming voice result from query parameters and populate input box ONLY
     if "speech_result" in st.query_params:
         transcript = st.query_params["speech_result"]
         # Clear query parameters immediately so old results don't linger
         st.query_params.clear()
-        # Set text input value directly in session state
+        # Set text input value directly in session state for display
         st.session_state[current_key] = transcript
-        # Evaluate answer immediately
-        evaluate_cantonese_speech(transcript)
         st.rerun()
 
     # Helper function to advance question safely
@@ -168,9 +170,17 @@ elif st.session_state.stage == "gameplay":
         st.session_state.show_tick_feedback = False
         st.session_state.pending_advance = False
         st.query_params.clear()
+        
+        # Clear current question key from session state
+        if current_key in st.session_state:
+            del st.session_state[current_key]
+
         if st.session_state.current_item_index + 1 < len(ITEMS):
             st.session_state.current_item_index += 1
             st.session_state.item_start_time = time.time()
+            # Initialize next question input box as empty
+            next_key = f"manual_in_{st.session_state.current_item_index}"
+            st.session_state[next_key] = ""
         else:
             st.session_state.stage = "complete"
 
@@ -190,7 +200,7 @@ elif st.session_state.stage == "gameplay":
     st.markdown("<p style='text-align: center; font-size: 18px; color: #2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係雞」）</p>", unsafe_allow_html=True)
     st.markdown(f"<div style='font-size: 130px; text-align: center; margin: 10px 0;'>{current_item['emoji']}</div>", unsafe_allow_html=True)
 
-    # Speech Recognition HTML/JS Component (Includes index comment to force dynamic re-render)
+    # Speech Recognition HTML/JS Component
     components.html(
         f"""
         <!DOCTYPE html>
@@ -238,12 +248,10 @@ elif st.session_state.stage == "gameplay":
                         document.getElementById('status').innerHTML = "✅ 聽到: <b>" + transcript + "</b>";
                         document.getElementById('start-btn').style.backgroundColor = "#388E3C";
                         
-                        // Clean history state and pass transcript to Streamlit
                         setTimeout(function() {{
                             var cleanUrl = window.top.location.pathname + "?speech_result=" + encodeURIComponent(transcript);
-                            window.top.history.replaceState(null, '', cleanUrl);
                             window.top.location.href = cleanUrl;
-                        }}, 400);
+                        }}, 300);
                     }};
 
                     recognition.onerror = function(event) {{
@@ -263,7 +271,8 @@ elif st.session_state.stage == "gameplay":
         </body>
         </html>
         """,
-        height=150
+        height=150,
+        key=f"speech_component_{st.session_state.current_item_index}"
     )
 
     st.markdown("---")
