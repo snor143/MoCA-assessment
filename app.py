@@ -105,7 +105,7 @@ def evaluate_cantonese_speech(spoken_text):
     
     clean_text = spoken_text.strip().replace(" ", "").replace("呢個係", "").replace("這是", "").replace("個位是", "")
     
-    # Check if any synonym exists in spoken sentence
+    # Check if any synonym exists in spoken sentence or clean text
     is_correct = any(synonym in spoken_text or synonym in clean_text for synonym in current_item["acceptable_synonyms"])
     
     if is_correct:
@@ -114,7 +114,7 @@ def evaluate_cantonese_speech(spoken_text):
     else:
         st.session_state.show_tick_feedback = False
 
-    # Log telemetry silently
+    # Log telemetry
     st.session_state.telemetry_logs.append({
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "item_id": current_item["id"],
@@ -125,7 +125,6 @@ def evaluate_cantonese_speech(spoken_text):
     })
 
     # Prepare for next item
-    st.session_state.last_spoken_transcript = spoken_text
     st.session_state.pending_advance = True
     
 # --- STAGE 1: INTRO SCREEN ---
@@ -147,22 +146,30 @@ if st.session_state.stage == "intro":
 
 # --- STAGE 2: GAMEPLAY (CANTONESE VOICE RECOGNITION) ---
 elif st.session_state.stage == "gameplay":
+    # 1. Listen for voice recognition results passed from JS via URL parameters
+    if "speech_result" in st.query_params:
+        spoken_transcript = st.query_params["speech_result"]
+        # Clear URL parameter
+        del st.query_params["speech_result"]
+        # Evaluate speech and update state
+        evaluate_cantonese_speech(spoken_transcript)
+        st.rerun()
+
     # Helper to advance to next item safely
     def advance_to_next_item():
         st.session_state.show_tick_feedback = False
         st.session_state.pending_advance = False
-        st.session_state.last_spoken_transcript = ""
         if st.session_state.current_item_index + 1 < len(ITEMS):
             st.session_state.current_item_index += 1
             st.session_state.item_start_time = time.time()
         else:
             st.session_state.stage = "complete"
 
-    # Handle pending advance state (e.g. after speech or manual submit)
+    # Handle pending advance state (displays tick if correct, then advances)
     if st.session_state.get("pending_advance", False):
         if st.session_state.get("show_tick_feedback", False):
             st.success("✅ 正確！ (Correct!)", icon="✅")
-            time.sleep(1.2)  # Brief visual tick display before moving on
+            time.sleep(1.0)  # Brief visual tick feedback
         advance_to_next_item()
         st.rerun()
 
@@ -211,7 +218,7 @@ elif st.session_state.stage == "gameplay":
                     recognition = new SpeechRecognition();
                     recognition.lang = 'zh-HK';
                     recognition.continuous = false;
-                    recognition.interimResults = true; // Capture speech instantly
+                    recognition.interimResults = false;
 
                     recognition.onstart = function() {{
                         document.getElementById('status').innerHTML = "🔴 正在聆聽中，請講話... (Listening...)";
@@ -219,20 +226,18 @@ elif st.session_state.stage == "gameplay":
                     }};
 
                     recognition.onresult = function(event) {{
-                        var transcript = "";
-                        for (var i = event.resultIndex; i < event.results.length; ++i) {{
-                            transcript += event.results[i][0].transcript;
-                        }}
+                        var transcript = event.results[0][0].transcript;
                         document.getElementById('status').innerHTML = "✅ 聽到: <b>" + transcript + "</b>";
                         document.getElementById('start-btn').style.backgroundColor = "#388E3C";
                         
-                        if (event.results[0].isFinal) {{
-                            window.parent.postMessage({{ type: "CANTONESE_SPEECH_RESULT", text: transcript }}, "*");
-                        }}
+                        // Pass Cantonese speech transcript directly to Streamlit Python via URL
+                        setTimeout(function() {{
+                            window.top.location.href = window.top.location.pathname + "?speech_result=" + encodeURIComponent(transcript);
+                        }}, 600);
                     }};
 
                     recognition.onerror = function(event) {{
-                        document.getElementById('status').innerHTML = "⚠️ 未能識別，請再試一次或直接按下一題";
+                        document.getElementById('status').innerHTML = "⚠️ 未能識別，請再試一次 (Error: " + event.error + ")";
                         document.getElementById('start-btn').style.backgroundColor = "#E65100";
                     }};
                 }} else {{
@@ -253,15 +258,15 @@ elif st.session_state.stage == "gameplay":
 
     st.markdown("---")
     
-    # Text input fallback
+    # Manual text input backup
     manual_input = st.text_input(
-        "語音識別結果 / 手動輸入 (Spoken Text Preview):", 
+        "手動輸入 / 備用答案 (Manual Backup Input):", 
         key=f"manual_in_{st.session_state.current_item_index}"
     )
 
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("👉 確認 / 下一題 (Submit & Next)", key=f"btn_next_{st.session_state.current_item_index}"):
+        if st.button("👉 提交手動答案 (Submit Manual Text)", key=f"btn_next_{st.session_state.current_item_index}"):
             ans = manual_input if manual_input else "未有說話"
             evaluate_cantonese_speech(ans)
             st.rerun()
