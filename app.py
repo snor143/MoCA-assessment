@@ -17,9 +17,35 @@ st.markdown(
     """
 <style>
 .main { background-color:#FFFDF9; }
-.stButton>button { width:100%; height:70px; font-size:22px !important; font-weight:bold; border-radius:16px; background:#2E7D32; color:white; border:0; margin-bottom:12px; }
-.stButton>button:hover { background:#1B5E20; }
 .instruction-card { background:#F0F7F4; padding:24px; border-radius:16px; border-left:8px solid #2E7D32; margin-bottom:24px; }
+
+/* Custom Native Streamlit Button Styling */
+div.stButton > button {
+    width: 100% !important;
+    height: 65px !important;
+    font-size: 22px !important;
+    font-weight: bold !important;
+    border-radius: 16px !important;
+    border: 0 !important;
+    color: white !important;
+    margin-top: 10px !important;
+}
+
+/* Submit Button Style */
+div[data-testid="stColumn"]:nth-child(1) div.stButton > button {
+    background-color: #2E7D32 !important;
+}
+div[data-testid="stColumn"]:nth-child(1) div.stButton > button:hover {
+    background-color: #1B5E20 !important;
+}
+
+/* Skip Button Style */
+div[data-testid="stColumn"]:nth-child(2) div.stButton > button {
+    background-color: #607D8B !important;
+}
+div[data-testid="stColumn"]:nth-child(2) div.stButton > button:hover {
+    background-color: #455A64 !important;
+}
 </style>
 """,
     unsafe_allow_html=True,
@@ -125,23 +151,12 @@ if st.session_state.stage == "intro":
 
 elif st.session_state.stage == "gameplay":
     index = st.session_state.current_item_index
-    transcript = st.query_params.get("speech_result")
-    submission = st.query_params.get("answer_submission")
-    skip = st.query_params.get("skip_item")
 
-    if transcript is not None:
-        st.session_state.last_transcript = str(transcript)
+    # Receive transcript or manual edit updates from HTML component
+    if "speech_result" in st.query_params:
+        transcript = str(st.query_params["speech_result"])
         st.query_params.clear()
-        st.rerun()
-
-    if submission is not None or skip is not None:
-        answer = "跳過" if skip is not None else str(submission)
-        correct = evaluate_answer(answer)
-        st.query_params.clear()
-        if correct:
-            st.success("✅ 正確！ (Correct!)", icon="✅")
-            time.sleep(0.8)
-        advance_item()
+        st.session_state.last_transcript = transcript
         st.rerun()
 
     item = ITEMS[index]
@@ -157,7 +172,7 @@ elif st.session_state.stage == "gameplay":
         unsafe_allow_html=True,
     )
     st.markdown(
-        "<p style='text-align:center;font-size:18px;color:#2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係蝴蝶」）</p>",
+        "<p style='font-size:18px;text-align:center;color:#2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係蝴蝶」）</p>",
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -165,18 +180,16 @@ elif st.session_state.stage == "gameplay":
         unsafe_allow_html=True,
     )
 
+    # HTML Component: Voice Recognition + HTML Textarea with auto-sync
     components.html(
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
     body{{margin:0;font-family:sans-serif}}
-    button{{width:100%;height:65px;font-size:22px;font-weight:bold;color:white;border:0;border-radius:16px;cursor:pointer;margin-bottom:10px}}
-    #mic{{background:#E65100}}
-    #submit{{background:#2E7D32}}
-    #skip{{background:#607D8B}}
+    button{{width:100%;height:65px;font-size:22px;font-weight:bold;color:white;border:0;border-radius:16px;cursor:pointer;background:#2E7D32}}
     button:disabled{{opacity:.65;cursor:wait}}
-    .status{{font-size:20px;text-align:center;min-height:30px;margin:8px 0}}
+    .status{{font-size:20px;text-align:center;margin:8px 0;color:#333}}
     label{{display:block;font-size:18px;margin:10px 0 6px}}
-    textarea{{box-sizing:border-box;width:100%;min-height:70px;padding:12px;font-size:22px;border:2px solid #4CAF50;border-radius:12px;resize:vertical}}
+    textarea{{box-sizing:border-box;width:100%;min-height:75px;padding:12px;font-size:22px;border:2px solid #4CAF50;border-radius:12px;resize:vertical}}
     .display{{background:#E8F5E9;padding:12px;border-radius:12px;font-size:20px;margin:10px 0}}
     </style></head><body>
     <button id="mic" type="button">🎤 按此說話 (Tap & Say)</button>
@@ -184,102 +197,101 @@ elif st.session_state.stage == "gameplay":
     <div class="display">🎤 語音結果：<span id="display">{displayed}</span></div>
     <label for="answer">答案（可修改或手動輸入）：</label>
     <textarea id="answer" placeholder="語音結果會顯示在這裡；也可以手動輸入">{initial}</textarea>
-    <button id="submit" type="button">👉 提交答案 / 下一題</button>
-    <button id="skip" type="button">⏭️ 跳過</button>
+
     <script>
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const mic = document.getElementById('mic'), status = document.getElementById('status'), answer = document.getElementById('answer'), display = document.getElementById('display');
-    let recognition = null, listening = false, navigating = false;
+    const mic = document.getElementById('mic'), status = document.getElementById('status'), answer = document.getElementById('answer');
+    let recognition = null, listening = false;
 
-    // Safe navigation that works inside sandboxed Streamlit iframes
-    function go(name, value) {{
-      const searchStr = '?' + encodeURIComponent(name) + '=' + encodeURIComponent(value);
-      try {{
-        window.parent.location.search = searchStr;
-      }} catch (e1) {{
-        try {{
-          window.top.location.search = searchStr;
-        }} catch (e2) {{
-          window.parent.location.href = searchStr;
-        }}
-      }}
+    function syncText(text) {{
+        window.location.search = '?speech_result=' + encodeURIComponent(text);
     }}
 
-    function ready(message) {{
-      listening = false;
-      mic.disabled = false;
-      mic.style.background = '#E65100';
-      mic.textContent = '🎤 按此說話 (Tap & Say)';
-      status.textContent = message || '點擊上方按鈕並講出名稱';
-    }}
+    // Automatically sync manual edits when user leaves textarea or presses enter
+    answer.onchange = () => {{
+        syncText(answer.value);
+    }};
 
-    if (SR) {{
-      recognition = new SR();
-      recognition.lang = 'zh-HK';
-      recognition.continuous = false;
-      recognition.interimResults = false;
+    if(SR) {{
+        recognition = new SR();
+        recognition.lang = 'zh-HK';
+        recognition.continuous = false;
+        recognition.interimResults = false;
 
-      recognition.onstart = () => {{
-        listening = true;
-        mic.style.background = '#D32F2F';
-        mic.textContent = '⏹️ 停止聆聽 (Stop)';
-        status.textContent = '🔴 正在聆聽中，請講話...';
-      }};
+        recognition.onstart = () => {{
+            listening = true;
+            mic.style.background = '#D32F2F';
+            mic.textContent = '⏹️ 正在聆聽中... (Listening)';
+            status.textContent = '🔴 正在聆聽中，請講話...';
+        }};
 
-      recognition.onresult = (event) => {{
-        const text = event.results[0][0].transcript.trim();
-        if (!text) {{
-          ready('⚠️ 沒有聽到內容 — 請再試一次');
-          return;
-        }}
-        listening = false;
-        navigating = true;
-        answer.value = text;
-        display.textContent = text;
-        status.textContent = '✅ 聽到: ' + text;
-        mic.style.background = '#388E3C';
-        go('speech_result', text);
-      }};
+        recognition.onresult = (event) => {{
+            const text = event.results[0][0].transcript.trim();
+            if(!text) {{
+                status.textContent = '⚠️ 沒有聽到內容 — 請再試一次';
+                listening = false;
+                mic.style.background = '#2E7D32';
+                mic.textContent = '🎤 按此說話 (Tap & Say)';
+                return;
+            }}
+            status.textContent = '✅ 聽到: ' + text;
+            mic.style.background = '#388E3C';
+            syncText(text);
+        }};
 
-      recognition.onerror = (event) => {{
-        navigating = false;
-        ready('⚠️ 未能識別 (' + event.error + ') — 請再試一次');
-      }};
+        recognition.onerror = (event) => {{
+            listening = false;
+            mic.style.background = '#2E7D32';
+            mic.textContent = '🎤 按此說話 (Tap & Say)';
+            status.textContent = '⚠️ 未能識別 (' + event.error + ') — 請再試一次';
+        }};
 
-      recognition.onend = () => {{
-        if (!navigating) ready();
-      }};
+        recognition.onend = () => {{
+            if(listening) {{
+                listening = false;
+                mic.style.background = '#2E7D32';
+                mic.textContent = '🎤 按此說話 (Tap & Say)';
+            }}
+        }};
     }} else {{
-      mic.disabled = true;
-      status.textContent = '❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)';
+        mic.disabled = true;
+        status.textContent = '❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)';
     }}
 
     mic.onclick = () => {{
-      if (!recognition) return;
-      if (listening) {{
-        recognition.stop();
-        return;
-      }}
-      navigating = false;
-      ready();
-      try {{
-        recognition.start();
-      }} catch (e) {{
-        ready('⚠️ 麥克風未能啟動 — 請再試一次');
-      }}
-    }};
-
-    document.getElementById('submit').onclick = () => {{
-      go('answer_submission', answer.value || '');
-    }};
-
-    document.getElementById('skip').onclick = () => {{
-      go('skip_item', '1');
+        if(!recognition) return;
+        if(listening) {{
+            recognition.stop();
+        }} else {{
+            try {{ recognition.start(); }} catch(e) {{ recognition.stop(); recognition.start(); }}
+        }}
     }};
     </script></body></html>
     """,
-        height=490,
+        height=310,
     )
+
+    # Native Streamlit Buttons
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("👉 提交答案 / 下一題", key=f"sub_{index}"):
+            ans = (
+                st.session_state.last_transcript.strip()
+                if st.session_state.last_transcript.strip()
+                else "未有說話"
+            )
+            correct = evaluate_answer(ans)
+            if correct:
+                st.success("✅ 正確！ (Correct!)", icon="✅")
+                time.sleep(0.8)
+            advance_item()
+            st.rerun()
+
+    with col2:
+        if st.button("⏭️ 跳過", key=f"skip_{index}"):
+            evaluate_answer("跳過")
+            advance_item()
+            st.rerun()
 
 elif st.session_state.stage == "complete":
     st.balloons()
