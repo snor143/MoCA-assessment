@@ -158,11 +158,8 @@ elif st.session_state.stage == "gameplay":
         # Clear URL query parameters immediately
         st.query_params.clear()
         
-        # WRITE VOICE RESULT DIRECTLY TO THE TEXT INPUT FIELD
+        # Populate the text input box in Session State with the transcript
         st.session_state[current_key] = transcript
-        
-        # Evaluate speech answer immediately
-        evaluate_cantonese_speech(transcript)
         st.rerun()
 
     # Helper function to advance question safely
@@ -240,7 +237,7 @@ elif st.session_state.stage == "gameplay":
                         document.getElementById('status').innerHTML = "✅ 聽到: <b>" + transcript + "</b>";
                         document.getElementById('start-btn').style.backgroundColor = "#388E3C";
                         
-                        // Clean history state and pass transcript to Streamlit URL
+                        // Pass transcript to Streamlit query parameters
                         setTimeout(function() {{
                             var cleanUrl = window.top.location.pathname + "?speech_result=" + encodeURIComponent(transcript);
                             window.top.history.replaceState(null, '', cleanUrl);
