@@ -217,7 +217,6 @@ elif st.session_state.stage == "gameplay":
         navigating = true;
         answer.value = text;
         display.textContent = text;
-        status.textContent = '✅ 聽到: ' + text;
         mic.style.background = '#388E3C';
         parentNavigate('speech_result', text);
       }};
