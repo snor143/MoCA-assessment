@@ -94,37 +94,40 @@ ITEMS = [
 ]
 
 def evaluate_cantonese_speech(spoken_text):
-    """Evaluates if the spoken Cantonese text matches acceptable target synonyms."""
+    """Evaluates Cantonese speech, provides positive tick feedback for correct answers, and advances smoothly."""
     current_item = ITEMS[st.session_state.current_item_index]
-    elapsed_time = round(time.time() - st.session_state.item_start_time, 2)
     
-    clean_text = spoken_text.strip().replace(" ", "").replace("這是", "").replace("個位是", "")
+    # Calculate latency
+    if st.session_state.item_start_time:
+        elapsed_time = round(time.time() - st.session_state.item_start_time, 2)
+    else:
+        elapsed_time = 0.0
+    
+    clean_text = spoken_text.strip().replace(" ", "").replace("呢個係", "").replace("這是", "").replace("個位是", "")
     
     # Check if any synonym exists in spoken sentence
-    is_correct = any(synonym in clean_text for synonym in current_item["acceptable_synonyms"])
+    is_correct = any(synonym in spoken_text or synonym in clean_text for synonym in current_item["acceptable_synonyms"])
     
     if is_correct:
         st.session_state.moca_naming_score += current_item["moca_weight"]
+        st.session_state.show_tick_feedback = True
+    else:
+        st.session_state.show_tick_feedback = False
 
-    # Log speech telemetry
+    # Log telemetry silently
     st.session_state.telemetry_logs.append({
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "item_id": current_item["id"],
-        "familiarity_tier": current_item["tier"],
         "target_name": current_item["primary_name"],
         "user_spoken_raw": spoken_text,
-        "cleaned_transcript": clean_text,
         "is_correct": is_correct,
         "speech_latency_seconds": elapsed_time
     })
-    
-    # Progress game
-    if st.session_state.current_item_index + 1 < len(ITEMS):
-        st.session_state.current_item_index += 1
-        st.session_state.item_start_time = time.time()
-    else:
-        st.session_state.stage = "complete"
 
+    # Prepare for next item
+    st.session_state.last_spoken_transcript = spoken_text
+    st.session_state.pending_advance = True
+    
 # --- STAGE 1: INTRO SCREEN ---
 if st.session_state.stage == "intro":
     st.title("🛒 香港街市語音買菜 (HK Market Voice Explorer)")
@@ -144,26 +147,36 @@ if st.session_state.stage == "intro":
 
 # --- STAGE 2: GAMEPLAY (CANTONESE VOICE RECOGNITION) ---
 elif st.session_state.stage == "gameplay":
-    current_item = ITEMS[st.session_state.current_item_index]
-    
-    # Check if a voice result was passed via URL query parameters
-    if "voice_result" in st.query_params:
-        spoken_text = st.query_params["voice_result"]
-        # Clear query param
-        del st.query_params["voice_result"]
-        # Process answer
-        evaluate_cantonese_speech(spoken_text)
+    # Helper to advance to next item safely
+    def advance_to_next_item():
+        st.session_state.show_tick_feedback = False
+        st.session_state.pending_advance = False
+        st.session_state.last_spoken_transcript = ""
+        if st.session_state.current_item_index + 1 < len(ITEMS):
+            st.session_state.current_item_index += 1
+            st.session_state.item_start_time = time.time()
+        else:
+            st.session_state.stage = "complete"
+
+    # Handle pending advance state (e.g. after speech or manual submit)
+    if st.session_state.get("pending_advance", False):
+        if st.session_state.get("show_tick_feedback", False):
+            st.success("✅ 正確！ (Correct!)", icon="✅")
+            time.sleep(1.2)  # Brief visual tick display before moving on
+        advance_to_next_item()
         st.rerun()
 
+    current_item = ITEMS[st.session_state.current_item_index]
+
+    # Display progress
     st.markdown(f"<p style='font-size: 22px; text-align: center; color: #666;'>進度: {st.session_state.current_item_index + 1} / {len(ITEMS)}</p>", unsafe_allow_html=True)
     st.markdown("<h2 style='text-align: center;'>請大聲講出，這是什麼食材？</h2>", unsafe_allow_html=True)
-    
+    st.markdown("<p style='text-align: center; font-size: 18px; color: #2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係苦瓜」）</p>", unsafe_allow_html=True)
+
     # Visual stimulus
-    st.markdown(f"<div style='font-size: 140px; text-align: center; margin: 10px 0;'>{current_item['emoji']}</div>", unsafe_allow_html=True)
-    
-    st.markdown("### 🎙️ 廣東話語音輸入 (Cantonese Speech Input):")
-    
-    # Web Speech API HTML/JS Component with Direct URL Redirect
+    st.markdown(f"<div style='font-size: 130px; text-align: center; margin: 10px 0;'>{current_item['emoji']}</div>", unsafe_allow_html=True)
+
+    # Speech Recognition HTML/JS Component
     components.html(
         f"""
         <!DOCTYPE html>
@@ -173,23 +186,23 @@ elif st.session_state.stage == "gameplay":
             <style>
                 .mic-btn {{
                     width: 100%;
-                    height: 80px;
+                    height: 85px;
                     font-size: 24px;
                     font-weight: bold;
                     background-color: #E65100;
                     color: white;
                     border: none;
-                    border-radius: 16px;
+                    border-radius: 18px;
                     cursor: pointer;
-                    margin-bottom: 10px;
+                    box-shadow: 0px 4px 8px rgba(0,0,0,0.15);
                 }}
                 .mic-btn:active {{ background-color: #BF360C; }}
-                .status-text {{ font-size: 20px; font-family: sans-serif; color: #333; text-align: center; margin-top: 5px; }}
+                .status-text {{ font-size: 20px; font-family: sans-serif; color: #333; text-align: center; margin-top: 10px; }}
             </style>
         </head>
         <body>
-            <button class="mic-btn" id="start-btn" onclick="startRecognition()">🎤 按此開始說話 (Tap to Speak)</button>
-            <div class="status-text" id="status">點擊上方按鈕並講出食材名稱</div>
+            <button class="mic-btn" id="start-btn" onclick="startRecognition()">🎤 按此說話 (Tap & Say "呢個係...")</button>
+            <div class="status-text" id="status">點擊上方按鈕並講出名稱</div>
 
             <script>
                 var recognition;
@@ -198,7 +211,7 @@ elif st.session_state.stage == "gameplay":
                     recognition = new SpeechRecognition();
                     recognition.lang = 'zh-HK';
                     recognition.continuous = false;
-                    recognition.interimResults = false;
+                    recognition.interimResults = true; // Capture speech instantly
 
                     recognition.onstart = function() {{
                         document.getElementById('status').innerHTML = "🔴 正在聆聽中，請講話... (Listening...)";
@@ -206,53 +219,56 @@ elif st.session_state.stage == "gameplay":
                     }};
 
                     recognition.onresult = function(event) {{
-                        var transcript = event.results[0][0].transcript;
-                        document.getElementById('status').innerHTML = "✅ 聽到: <b>" + transcript + "</b> (正在提交...)";
+                        var transcript = "";
+                        for (var i = event.resultIndex; i < event.results.length; ++i) {{
+                            transcript += event.results[i][0].transcript;
+                        }}
+                        document.getElementById('status').innerHTML = "✅ 聽到: <b>" + transcript + "</b>";
                         document.getElementById('start-btn').style.backgroundColor = "#388E3C";
                         
-                        // Pass transcript directly back to Streamlit via top window URL
-                        setTimeout(function() {{
-                            window.top.location.href = window.top.location.pathname + "?voice_result=" + encodeURIComponent(transcript);
-                        }}, 800);
+                        if (event.results[0].isFinal) {{
+                            window.parent.postMessage({{ type: "CANTONESE_SPEECH_RESULT", text: transcript }}, "*");
+                        }}
                     }};
 
                     recognition.onerror = function(event) {{
-                        document.getElementById('status').innerHTML = "⚠️ 未能識別，請再試一次 (Error: " + event.error + ")";
+                        document.getElementById('status').innerHTML = "⚠️ 未能識別，請再試一次或直接按下一題";
                         document.getElementById('start-btn').style.backgroundColor = "#E65100";
                     }};
                 }} else {{
-                    document.getElementById('status').innerHTML = "❌ 您的瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)";
+                    document.getElementById('status').innerHTML = "❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)";
                 }}
 
                 function startRecognition() {{
                     if (recognition) {{
-                        recognition.start();
+                        try {{ recognition.start(); }} catch(e) {{ recognition.stop(); recognition.start(); }}
                     }}
                 }}
             </script>
         </body>
         </html>
         """,
-        height=160
+        height=150
     )
 
     st.markdown("---")
-    st.markdown("##### 備用輸入 (Manual / Keyboard Dictation Fallback):")
     
-    # Manual text input backup
-    manual_input = st.text_input("如錄音不成功，可在此輸入或用 iPad 鍵盤語音輸入:", key=f"manual_in_{st.session_state.current_item_index}")
-    
+    # Text input fallback
+    manual_input = st.text_input(
+        "語音識別結果 / 手動輸入 (Spoken Text Preview):", 
+        key=f"manual_in_{st.session_state.current_item_index}"
+    )
+
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("提交文字答案 (Submit Manual Answer)"):
-            if manual_input:
-                evaluate_cantonese_speech(manual_input)
-                st.rerun()
-            else:
-                st.warning("請先輸入答案或使用上方麥克風！")
+        if st.button("👉 確認 / 下一題 (Submit & Next)", key=f"btn_next_{st.session_state.current_item_index}"):
+            ans = manual_input if manual_input else "未有說話"
+            evaluate_cantonese_speech(ans)
+            st.rerun()
+
     with col2:
-        if st.button("跳過 / 不知道 (Skip Item)"):
-            evaluate_cantonese_speech("不知道")
+        if st.button("⏭️ 跳過 (Skip Item)", key=f"btn_skip_{st.session_state.current_item_index}"):
+            evaluate_cantonese_speech("跳過")
             st.rerun()
 
 # --- STAGE 3: ASSESSMENT COMPLETE & THERAPIST DASHBOARD ---
