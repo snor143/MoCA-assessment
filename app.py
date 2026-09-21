@@ -50,6 +50,7 @@ def advance_item():
         st.session_state.current_item_index += 1
         st.session_state.item_start_time = time.time()
         st.session_state.last_transcript = ""
+        st.session_state.manual_answer = ""
     else:
         st.session_state.stage = "complete"
 
@@ -65,6 +66,7 @@ if st.session_state.stage == "intro":
         st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
         st.session_state.last_transcript = ""
+        st.session_state.manual_answer = ""
         st.session_state.item_start_time = time.time()
         st.query_params.clear()
         st.rerun()
@@ -76,7 +78,11 @@ elif st.session_state.stage == "gameplay":
     skip = st.query_params.get("skip_item")
 
     if transcript is not None:
-        st.session_state.last_transcript = str(transcript)
+        transcript_text = str(transcript)
+        st.session_state.last_transcript = transcript_text
+        # Set the widget's state before the text_area is created on the rerun.
+        # Otherwise Streamlit restores the old value associated with its key.
+        st.session_state.manual_answer = transcript_text
         st.query_params.clear()
         st.rerun()
 
@@ -128,7 +134,6 @@ elif st.session_state.stage == "gameplay":
     st.write("")
     answer_input = st.text_area(
         "答案（可修改或手動輸入）：",
-        value=st.session_state.last_transcript,
         height=100,
         key="manual_answer",
     )
@@ -137,7 +142,6 @@ elif st.session_state.stage == "gameplay":
     col1, col2 = st.columns(2)
     with col1:
         if st.button("👉 提交答案 / 下一題"):
-            st.session_state.last_transcript = answer_input
             answer = str(answer_input).strip() or ""
             correct = evaluate_answer(answer)
             if correct:
@@ -163,6 +167,7 @@ elif st.session_state.stage == "complete":
         st.session_state.telemetry_logs=[]
         st.session_state.moca_naming_score=0
         st.session_state.last_transcript=""
+        st.session_state.manual_answer=""
         st.session_state.item_start_time = time.time()
         st.query_params.clear()
         st.rerun()
