@@ -134,12 +134,11 @@ if st.session_state.stage == "intro":
     st.markdown("""
         <div class="instruction-card">
             <h2>婆婆/伯伯，今日我們要去街市買菜！</h2>
-            <p style="font-size: 22px;">請睇睇螢幕上的食材，<b>用廣東話講出它的名字</b>。</p>
-            <p style="font-size: 18px; color: #555;">(例如說：「呢個係雞」或「八爪魚」)</p>
+            <p style="font-size: 22px;">請睇睇螢幕上的動物，<b>用廣東話講出它的名字</b>。</p>
         </div>
     """, unsafe_allow_html=True)
     
-    if st.button("開始買菜 (Start Voice Assessment)"):
+    if st.button("開始 (Start)"):
         st.session_state.stage = "gameplay"
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
@@ -271,7 +270,7 @@ elif st.session_state.stage == "gameplay":
     # Input text box synced dynamically per question
     manual_input = st.text_input(
         "識別結果 / 手動輸入 (Recognized Text / Manual Input):", 
-        key=current_key
+        key=speech_result
     )
 
     col1, col2 = st.columns(2)
