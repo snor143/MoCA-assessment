@@ -16,7 +16,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-for key, value in {"stage":"intro", "current_item_index":0, "telemetry_logs":[], "item_start_time":None, "moca_naming_score":0, "last_transcript":""}.items():
+for key, value in {
+    "stage": "intro",
+    "current_item_index": 0,
+    "telemetry_logs": [],
+    "item_start_time": None,
+    "moca_naming_score": 0,
+    "last_transcript": "",
+    "manual_answer": "",
+    "voice_ready": False,
+}.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
@@ -30,14 +39,16 @@ ITEMS = [
 def evaluate_answer(answer):
     item = ITEMS[st.session_state.current_item_index]
     elapsed = round(time.time() - st.session_state.item_start_time, 2) if st.session_state.item_start_time else 0.0
-    clean = answer.strip().replace(" ", "").replace("呢個係", "").replace("這是", "").replace("呢隻係", "").replace("嗰位是", "")
-    correct = any(s in answer or s in clean for s in item["acceptable_synonyms"])
+    answer = str(answer).strip()
+    clean = answer.replace(" ", "").replace("呢個係", "").replace("這是", "").replace("呢隻係", "").replace("嗰位是", "")
+    target = item["primary_name"]
+    correct = target in answer or target in clean
     if correct:
         st.session_state.moca_naming_score += item["moca_weight"]
     st.session_state.telemetry_logs.append({
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "item_id": item["id"],
-        "target_name": item["primary_name"],
+        "target_name": target,
         "user_spoken_raw": answer,
         "is_correct": correct,
         "speech_latency_seconds": elapsed,
@@ -45,14 +56,28 @@ def evaluate_answer(answer):
     return correct
 
 
+def reset_answer_state():
+    st.session_state.last_transcript = ""
+    st.session_state.manual_answer = ""
+    st.session_state.voice_ready = False
+
+
 def advance_item():
     if st.session_state.current_item_index + 1 < len(ITEMS):
         st.session_state.current_item_index += 1
         st.session_state.item_start_time = time.time()
-        st.session_state.last_transcript = ""
-        st.session_state.manual_answer = ""
+        reset_answer_state()
     else:
         st.session_state.stage = "complete"
+
+
+def finish_answer(answer):
+    correct = evaluate_answer(answer)
+    if correct:
+        st.success("✅ 正確！ (Correct!)", icon="✅")
+        time.sleep(0.8)
+    advance_item()
+    st.rerun()
 
 
 if st.session_state.stage == "intro":
@@ -65,73 +90,75 @@ if st.session_state.stage == "intro":
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
-        st.session_state.last_transcript = ""
-        st.session_state.manual_answer = ""
         st.session_state.item_start_time = time.time()
+        reset_answer_state()
         st.query_params.clear()
         st.rerun()
 
 elif st.session_state.stage == "gameplay":
-    index = st.session_state.current_item_index
-    transcript = st.query_params.get("speech_result")
-    submission = st.query_params.get("answer_submission")
-    skip = st.query_params.get("skip_item")
-
-    if transcript is not None:
-        transcript_text = str(transcript)
+    # SpeechRecognition runs in the browser component. It sends the transcript
+    # back as a query parameter; this run copies it into the widget state before
+    # the text_area is created.
+    voice_result = st.query_params.get("voice_answer")
+    if voice_result is not None:
+        transcript_text = str(voice_result).strip()
         st.session_state.last_transcript = transcript_text
-        # Set the widget's state before the text_area is created on the rerun.
-        # Otherwise Streamlit restores the old value associated with its key.
         st.session_state.manual_answer = transcript_text
+        st.session_state.voice_ready = bool(transcript_text)
         st.query_params.clear()
         st.rerun()
 
-    if submission is not None or skip is not None:
-        answer = "跳過" if skip is not None else str(submission)
-        correct = evaluate_answer(answer)
-        st.query_params.clear()
-        if correct:
-            st.success("✅ 正確！ (Correct!)", icon="✅")
-            time.sleep(0.8)
-        advance_item()
-        st.rerun()
-
+    index = st.session_state.current_item_index
     item = ITEMS[index]
     displayed = html.escape(st.session_state.last_transcript or "尚未有語音結果")
+
     st.markdown(f"<p style='font-size:22px;text-align:center;color:#666;'>進度: {index+1} / {len(ITEMS)}</p>", unsafe_allow_html=True)
     st.markdown("<h2 style='text-align:center;'>請大聲講出，這是什麼動物？</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center;font-size:18px;color:#2E7D32; font-weight:bold;'>", unsafe_allow_html=True)
     st.markdown(f"<div style='font-size:130px;text-align:center;margin:10px 0;'>{item['emoji']}</div>", unsafe_allow_html=True)
 
     components.html(f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
-    body{{margin:0;font-family:sans-serif}}button{{width:100%;height:70px;font-size:22px;font-weight:bold;color:white;border:0;border-radius:16px;cursor:pointer;margin-bottom:10px}}#mic{{background:#E65100}}button:disabled{{opacity:0.65;cursor:wait}}.status{{font-size:20px;text-align:center;min-height:30px;margin:8px 0}}.display{{background:#E8F5E9;padding:12px;border-radius:12px;font-size:20px;margin:10px 0}}    </style></head><body>
+    body{{margin:0;font-family:sans-serif}}button{{width:100%;height:70px;font-size:22px;font-weight:bold;color:white;border:0;border-radius:16px;cursor:pointer;margin-bottom:10px}}#mic{{background:#E65100}}button:disabled{{opacity:.65;cursor:wait}}.status{{font-size:20px;text-align:center;min-height:30px;margin:8px 0}}.display{{background:#E8F5E9;padding:12px;border-radius:12px;font-size:20px;margin:10px 0}}
+    </style></head><body>
     <button id="mic" type="button">🎤 按此說話 (Tap & Say)</button>
     <div class="status" id="status">點擊上方按鈕並講出名稱</div>
     <div class="display">🎤 語音結果：<span id="display">{displayed}</span></div>
     <script>
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     const mic=document.getElementById('mic'), status=document.getElementById('status'), display=document.getElementById('display');
-    let recognition=null, listening=false, navigating=false;
-    function go(name,value) {{
-      const url=new URL(window.top.location.href);
+    let recognition=null, listening=false;
+    function sendTranscript(text) {{
+      const url=new URL(window.parent.location.href);
       url.search='';
-      url.searchParams.set(name,value);
-      window.top.location.href=url.toString();
+      url.searchParams.set('voice_answer', text);
+      window.parent.location.assign(url.toString());
     }}
     function ready(message) {{ listening=false; mic.disabled=false; mic.style.background='#E65100'; mic.textContent='🎤 按此說話 (Tap & Say)'; status.textContent=message||'點擊上方按鈕並講出名稱'; }}
     if(SR) {{
-      recognition=new SR(); recognition.lang='zh-HK'; recognition.continuous=false; recognition.interimResults=false;
+      recognition=new SR();
+      recognition.lang='zh-HK';
+      recognition.continuous=false;
+      recognition.interimResults=false;
       recognition.onstart=()=>{{ listening=true; mic.style.background='#D32F2F'; mic.textContent='⏹️ 停止聆聽 (Stop)'; status.textContent='🔴 正在聆聽中，請講話...'; }};
-      recognition.onresult=(event)=>{{ const text=event.results[0][0].transcript.trim(); if(!text){{ready('⚠️ 沒有聽到內容 — 請再試一次');return}} listening=false; navigating=true; display.textContent=text; status.textContent='✅ 已取得語音結果，請確認後提交'; mic.style.background='#388E3C'; go('speech_result',text); }};
-      recognition.onerror=(event)=>{{ navigating=false; ready('⚠️ 未能識別 ('+event.error+') — 請再試一次'); }};
-      recognition.onend=()=>{{ if(!navigating) ready(); }};
+      recognition.onresult=(event)=>{{
+        const text=event.results[0][0].transcript.trim();
+        if(!text){{ ready('⚠️ 沒有聽到內容 — 請再試一次'); return; }}
+        listening=false;
+        display.textContent=text;
+        status.textContent='✅ 已收到語音，正在載入答案...';
+        sendTranscript(text);
+      }};
+      recognition.onerror=(event)=>{{ ready('⚠️ 未能識別 ('+event.error+') — 請再試一次'); }};
+      recognition.onend=()=>{{ if(!listening) ready(); }};
     }} else {{ mic.disabled=true; status.textContent='❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)'; }}
-    mic.onclick=()=>{{ if(!recognition)return; if(listening){{recognition.stop();return}} navigating=false; ready(); try{{recognition.start()}}catch(e){{ready('⚠️ 麥克風未能啟動 — 請再試一次');}} }};
+    mic.onclick=()=>{{
+      if(!recognition)return;
+      if(listening){{ recognition.stop(); return; }}
+      try{{ recognition.start(); }}catch(e){{ ready('⚠️ 麥克風未能啟動 — 請再試一次'); }}
+    }};
     </script></body></html>
     """, height=300)
 
-    st.write("")
     answer_input = st.text_area(
         "答案（可修改或手動輸入）：",
         height=100,
@@ -139,48 +166,42 @@ elif st.session_state.stage == "gameplay":
     )
     st.session_state.last_transcript = answer_input
 
+    if st.session_state.voice_ready:
+        st.info("已收到患者語音，請按「提交答案 / 下一題」記錄評分。")
+
     col1, col2 = st.columns(2)
     with col1:
         if st.button("👉 提交答案 / 下一題"):
-            answer = str(answer_input).strip() or ""
-            correct = evaluate_answer(answer)
-            if correct:
-                st.success("✅ 正確！ (Correct!)", icon="✅")
-                time.sleep(0.8)
-            advance_item()
-            st.rerun()
+            finish_answer(answer_input)
     with col2:
         if st.button("⏭️ 跳過"):
-            correct = evaluate_answer("跳過")
-            if correct:
-                st.success("✅ 正確！ (Correct!)", icon="✅")
-                time.sleep(0.8)
-            advance_item()
-            st.rerun()
+            finish_answer("跳過")
 
 elif st.session_state.stage == "complete":
-    st.balloons(); st.title("🎉 完成任務！感謝您的幫忙！")
-    st.markdown("<p style='font-size:24px;'>您已經成功分辨所有動物。</p>", unsafe_allow_html=True)
+    st.balloons()
+    st.title("🎉 完成任務！感謝您的幫忙！")
+    st.markdown("<p style='font-size:24px;'>您已經完成全部三項命名測試。</p>", unsafe_allow_html=True)
+    st.subheader("MoCA Naming Result Report")
+    st.metric("MoCA Naming Score", f"{st.session_state.moca_naming_score} / {len(ITEMS)}")
+
+    df = pd.DataFrame(st.session_state.telemetry_logs)
+    if not df.empty:
+        st.dataframe(df, use_container_width=True)
+        avg = df["speech_latency_seconds"].mean()
+        st.metric("Average Speech Latency", f"{round(avg, 2)} seconds")
+        st.download_button(
+            "📥 Download Speech Telemetry Log (.CSV)",
+            df.to_csv(index=False).encode("utf-8"),
+            f"moca_cantonese_speech_telemetry_{int(time.time())}.csv",
+            "text/csv",
+        )
+
     if st.button("再玩一次 (Play Again)"):
-        st.session_state.stage="intro"
-        st.session_state.current_item_index=0
-        st.session_state.telemetry_logs=[]
-        st.session_state.moca_naming_score=0
-        st.session_state.last_transcript=""
-        st.session_state.manual_answer=""
+        st.session_state.stage = "intro"
+        st.session_state.current_item_index = 0
+        st.session_state.telemetry_logs = []
+        st.session_state.moca_naming_score = 0
         st.session_state.item_start_time = time.time()
+        reset_answer_state()
         st.query_params.clear()
         st.rerun()
-    with st.expander("🩺 Occupational Therapist / Speech Telemetry Dashboard", expanded=True):
-        st.subheader("MoCA Naming Sub-score (Spontaneous Confrontation)")
-        c1,c2=st.columns(2)
-        with c1: st.metric("MoCA Proxy Naming Sub-score",f"{st.session_state.moca_naming_score} / 3 Points")
-        with c2:
-            if st.session_state.telemetry_logs:
-                avg=pd.DataFrame(st.session_state.telemetry_logs)["speech_latency_seconds"].mean(); st.metric("Avg. Speech Latency",f"{round(avg,2)} seconds")
-            else:
-                st.metric("Avg. Speech Latency","N/A")
-        df=pd.DataFrame(st.session_state.telemetry_logs)
-        st.dataframe(df)
-        if not df.empty:
-            st.download_button("📥 Download Speech Telemetry Log (.CSV)", df.to_csv(index=False).encode("utf-8"), f"moca_cantonese_speech_telemetry_{int(time.time())}.csv", "text/csv")
