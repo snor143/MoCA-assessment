@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 
 st.set_page_config(
-    page_title="HK Supermarket Explorer",
+    page_title="探索香港超市",
     page_icon="🛒",
     layout="centered",
     initial_sidebar_state="collapsed"
