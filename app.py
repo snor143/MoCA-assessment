@@ -1,3 +1,4 @@
+import html
 import time
 from datetime import datetime
 
@@ -6,7 +7,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="HK Market Voice MoCA Explorer",
+    page_title="HK Supermarket Explorer - Voice Naming",
     page_icon="🛒",
     layout="centered",
     initial_sidebar_state="collapsed",
@@ -16,18 +17,9 @@ st.markdown(
     """
 <style>
 .main { background-color:#FFFDF9; }
+.stButton>button { width:100%; height:70px; font-size:22px !important; font-weight:bold; border-radius:16px; background:#2E7D32; color:white; border:0; margin-bottom:12px; }
+.stButton>button:hover { background:#1B5E20; }
 .instruction-card { background:#F0F7F4; padding:24px; border-radius:16px; border-left:8px solid #2E7D32; margin-bottom:24px; }
-div.stButton > button {
-    width: 100% !important;
-    height: 60px !important;
-    font-size: 20px !important;
-    font-weight: bold !important;
-    border-radius: 14px !important;
-    border: 0 !important;
-    background-color: #607D8B !important;
-    color: white !important;
-}
-div.stButton > button:hover { background-color: #455A64 !important; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -40,6 +32,7 @@ for key, value in {
     "telemetry_logs": [],
     "item_start_time": None,
     "moca_naming_score": 0,
+    "last_transcript": "",
 }.items():
     if key not in st.session_state:
         st.session_state[key] = value
@@ -72,79 +65,87 @@ ITEMS = [
 ]
 
 
-def evaluate_and_advance(spoken_text):
+def evaluate_answer(answer):
     item = ITEMS[st.session_state.current_item_index]
     elapsed = (
         round(time.time() - st.session_state.item_start_time, 2)
         if st.session_state.item_start_time
         else 0.0
     )
-
     clean = (
-        spoken_text.strip()
+        answer.strip()
         .replace(" ", "")
         .replace("呢個係", "")
         .replace("這是", "")
         .replace("呢隻係", "")
+        .replace("嗰位是", "")
     )
-    is_skip = spoken_text == "跳過"
-    is_correct = (
-        not is_skip
-        and any(s in spoken_text or s in clean for s in item["acceptable_synonyms"])
-    )
-
-    if is_correct:
+    correct = any(s in answer or s in clean for s in item["acceptable_synonyms"])
+    if correct:
         st.session_state.moca_naming_score += item["moca_weight"]
-
     st.session_state.telemetry_logs.append({
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "item_id": item["id"],
         "target_name": item["primary_name"],
-        "user_spoken_raw": spoken_text,
-        "is_correct": is_correct,
+        "user_spoken_raw": answer,
+        "is_correct": correct,
         "speech_latency_seconds": elapsed,
     })
+    return correct
 
+
+def advance_item():
     if st.session_state.current_item_index + 1 < len(ITEMS):
         st.session_state.current_item_index += 1
         st.session_state.item_start_time = time.time()
+        st.session_state.last_transcript = ""
     else:
         st.session_state.stage = "complete"
 
 
-# STAGE 1: INTRO SCREEN
+# STAGE 1: INTRO
 if st.session_state.stage == "intro":
-    st.title("🛒 香港街市語音買菜 (HK Market Voice Assessment)")
+    st.title("🛒 香港街市語音買菜 (HK Market Voice Explorer)")
     st.markdown(
         """
     <div class="instruction-card">
         <h2>婆婆/伯伯，今日我們要去街市買菜！</h2>
-        <p style="font-size:22px;">請睇睇螢幕上的動物，<b>點擊麥克風並用廣東話講出它的名字</b>。</p>
+        <p style="font-size:22px;">請睇睇螢幕上的動物，<b>用廣東話講出它的名字</b>。</p>
     </div>
     """,
         unsafe_allow_html=True,
     )
-    if st.button("開始測試 (Start Voice Assessment)"):
+    if st.button("開始買菜 (Start Voice Assessment)"):
         st.session_state.stage = "gameplay"
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
+        st.session_state.last_transcript = ""
         st.session_state.item_start_time = time.time()
         st.query_params.clear()
         st.rerun()
 
-# STAGE 2: GAMEPLAY (PURE VOICE INTERACTION)
+# STAGE 2: GAMEPLAY
 elif st.session_state.stage == "gameplay":
     index = st.session_state.current_item_index
 
-    # Process incoming spoken voice input from query parameters
-    spoken_param = st.query_params.get("spoken_text")
-    if spoken_param is not None:
+    submission = st.query_params.get("answer_submission")
+    skip = st.query_params.get("skip_item")
+
+    # Process submission or skip action
+    if submission is not None or skip is not None:
+        answer = "跳過" if skip is not None else str(submission)
+        correct = evaluate_answer(answer)
         st.query_params.clear()
-        evaluate_and_advance(str(spoken_param))
+        if correct:
+            st.success("✅ 正確！ (Correct!)", icon="✅")
+            time.sleep(0.8)
+        advance_item()
         st.rerun()
 
     item = ITEMS[index]
+    initial = html.escape(st.session_state.last_transcript, quote=True)
+    displayed = html.escape(st.session_state.last_transcript or "尚未有語音結果")
 
     st.markdown(
         f"<p style='font-size:22px;text-align:center;color:#666;'>進度: {index+1} / {len(ITEMS)}</p>",
@@ -155,162 +156,170 @@ elif st.session_state.stage == "gameplay":
         unsafe_allow_html=True,
     )
     st.markdown(
-        "<p style='text-align:center;font-size:18px;color:#2E7D32;'>💡 提示：按下方按鈕後說<b>「呢個係...」</b></p>",
+        "<p style='text-align:center;font-size:18px;color:#2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係蝴蝶」）</p>",
         unsafe_allow_html=True,
     )
     st.markdown(
-        f"<div style='font-size:140px;text-align:center;margin:10px 0;'>{item['emoji']}</div>",
+        f"<div style='font-size:130px;text-align:center;margin:10px 0;'>{item['emoji']}</div>",
         unsafe_allow_html=True,
     )
 
-    # Simplified HTML Voice Component (Auto-submits as soon as spoken)
+    # HTML Component with Local JS Speech Sync
     components.html(
-        """
+        f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
-    body { margin:0; font-family:sans-serif; }
-    #mic { width:100%; height:85px; font-size:26px; font-weight:bold; color:white; border:0; border-radius:20px; cursor:pointer; background:#2E7D32; box-shadow:0 4px 10px rgba(0,0,0,0.15); }
-    #mic:active { transform: scale(0.98); }
-    .status { font-size:20px; text-align:center; margin-top:12px; color:#333; font-weight:500; }
+    body {{ margin:0; font-family:sans-serif; }}
+    button {{ width:100%; height:70px; font-size:22px; font-weight:bold; color:white; border:0; border-radius:16px; cursor:pointer; margin-bottom:12px; }}
+    #mic {{ background:#E65100; }}
+    #submit {{ background:#2E7D32; }}
+    #skip {{ background:#607D8B; }}
+    button:disabled {{ opacity:.65; cursor:wait; }}
+    .status {{ font-size:20px; text-align:center; min-height:30px; margin:8px 0; }}
+    label {{ display:block; font-size:18px; margin:10px 0 6px; }}
+    textarea {{ box-sizing:border-box; width:100%; min-height:70px; padding:12px; font-size:22px; border:2px solid #4CAF50; border-radius:12px; resize:vertical; }}
+    .display {{ background:#E8F5E9; padding:12px; border-radius:12px; font-size:20px; margin:10px 0; }}
     </style></head><body>
     <button id="mic" type="button">🎤 按此說話 (Tap & Say)</button>
     <div class="status" id="status">點擊上方按鈕並講出名稱</div>
+    <div class="display">🎤 語音結果：<span id="display">{displayed}</span></div>
+    <label for="answer">答案（可修改或手動輸入）：</label>
+    <textarea id="answer" placeholder="語音結果會顯示在這裡；也可以手動輸入">{initial}</textarea>
+    <button id="submit" type="button">👉 提交答案 / 下一題</button>
+    <button id="skip" type="button">⏭️ 跳過</button>
 
     <script>
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const mic = document.getElementById('mic'), status = document.getElementById('status');
+    const mic = document.getElementById('mic'), status = document.getElementById('status'), answer = document.getElementById('answer'), display = document.getElementById('display');
     let recognition = null, listening = false;
 
-    function sendResult(text) {
-        const search = '?spoken_text=' + encodeURIComponent(text);
-        try { window.top.location.search = search; }
-        catch(e1) {
-            try { window.parent.location.search = search; }
-            catch(e2) { window.location.search = search; }
-        }
-    }
+    // Safely updates URL search params to reload Streamlit Python state
+    function go(name, value) {{
+      const search = '?' + encodeURIComponent(name) + '=' + encodeURIComponent(value);
+      try {{
+        window.top.location.search = search;
+      }} catch(e1) {{
+        try {{
+          window.parent.location.search = search;
+        }} catch(e2) {{
+          window.location.search = search;
+        }}
+      }}
+    }}
 
-    if(SR) {
-        recognition = new SR();
-        recognition.lang = 'zh-HK';
-        recognition.continuous = false;
-        recognition.interimResults = false;
+    function setMicReady(message) {{
+      listening = false;
+      mic.disabled = false;
+      mic.style.background = '#E65100';
+      mic.textContent = '🎤 按此說話 (Tap & Say)';
+      status.textContent = message || '點擊上方按鈕並講出名稱';
+    }}
 
-        recognition.onstart = () => {
-            listening = true;
-            mic.style.background = '#D32F2F';
-            mic.textContent = '⏹️ 正在聆聽中... (Listening)';
-            status.textContent = '🔴 請大聲講出名稱...';
-        };
+    if(SR) {{
+      recognition = new SR();
+      recognition.lang = 'zh-HK';
+      recognition.continuous = false;
+      recognition.interimResults = false;
 
-        recognition.onresult = (event) => {
-            const text = event.results[0][0].transcript.trim();
-            if(!text) {
-                status.textContent = '⚠️ 沒有聽到內容 — 請再試一次';
-                mic.style.background = '#2E7D32';
-                mic.textContent = '🎤 按此說話 (Tap & Say)';
-                listening = false;
-                return;
-            }
-            status.textContent = '✅ 聽到: "' + text + '" (正在核對...)';
-            mic.style.background = '#388E3C';
-            sendResult(text);
-        };
+      recognition.onstart = () => {{
+        listening = true;
+        mic.style.background = '#D32F2F';
+        mic.textContent = '⏹️ 正在聆聽中... (Listening)';
+        status.textContent = '🔴 正在聆聽中，請講話...';
+      }};
 
-        recognition.onerror = (event) => {
-            listening = false;
-            mic.style.background = '#2E7D32';
-            mic.textContent = '🎤 按此說話 (Tap & Say)';
-            status.textContent = '⚠️ 未能識別 (' + event.error + ') — 請再試一次';
-        };
+      recognition.onresult = (event) => {{
+        const text = event.results[0][0].transcript.trim();
+        if(!text) {{
+          setMicReady('⚠️ 沒有聽到內容 — 請再試一次');
+          return;
+        }}
+        // Update input fields LOCALLY without triggering a page reload
+        answer.value = text;
+        display.textContent = text;
+        setMicReady('✅ 聽到: ' + text);
+      }};
 
-        recognition.onend = () => {
-            if(listening) {
-                listening = false;
-                mic.style.background = '#2E7D32';
-                mic.textContent = '🎤 按此說話 (Tap & Say)';
-            }
-        };
-    } else {
-        mic.disabled = true;
-        status.textContent = '❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)';
-    }
+      recognition.onerror = (event) => {{
+        setMicReady('⚠️ 未能識別 (' + event.error + ') — 請再試一次');
+      }};
 
-    mic.onclick = () => {
-        if(!recognition) return;
-        if(listening) {
-            recognition.stop();
-        } else {
-            try { recognition.start(); } catch(e) { recognition.stop(); recognition.start(); }
-        }
-    };
+      recognition.onend = () => {{
+        if(listening) setMicReady();
+      }};
+    }} else {{
+      mic.disabled = true;
+      status.textContent = '❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)';
+    }}
+
+    mic.onclick = () => {{
+      if(!recognition) return;
+      if(listening) {{
+        recognition.stop();
+        return;
+      }}
+      try {{
+        recognition.start();
+      }} catch(e) {{
+        setMicReady('⚠️ 麥克風未能啟動 — 請再試一次');
+      }}
+    }};
+
+    // Navigation only happens on Submit or Skip button clicks
+    document.getElementById('submit').onclick = (e) => {{
+      e.preventDefault();
+      go('answer_submission', answer.value);
+    }};
+
+    document.getElementById('skip').onclick = (e) => {{
+      e.preventDefault();
+      go('skip_item', '1');
+    }};
     </script></body></html>
     """,
-        height=140,
+        height=470,
     )
 
-    # Secondary Native Skip Button (If patient cannot name the animal)
-    if st.button("⏭️ 唔識答 / 跳過 (Skip)"):
-        evaluate_and_advance("跳過")
-        st.rerun()
-
-# STAGE 3: REPORT & AI PROMPT GENERATOR
+# STAGE 3: COMPLETE
 elif st.session_state.stage == "complete":
     st.balloons()
-    st.title("🎉 完成測試！ (Assessment Complete)")
-
-    df = pd.DataFrame(st.session_state.telemetry_logs)
-    avg_latency = (
-        round(df["speech_latency_seconds"].mean(), 2) if not df.empty else 0
+    st.title("🎉 完成任務！感謝您的幫忙！")
+    st.markdown(
+        "<p style='font-size:24px;'>您已經成功分辨所有動物。</p>",
+        unsafe_allow_html=True,
     )
-
-    # Performance Summary Cards
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric(
-            "MoCA Naming Sub-score",
-            f"{st.session_state.moca_naming_score} / {len(ITEMS)} Points",
-        )
-    with col2:
-        st.metric("Avg. Response Latency", f"{avg_latency} sec")
-
-    st.subheader("📋 Itemized Telemetry Summary")
-    st.dataframe(df, use_container_width=True)
-
-    # AI Cognitive Analysis Payload Generator
-    st.subheader("🤖 AI Cognitive Recommendation Payload")
-    st.caption(
-        "This JSON structure can be passed directly to an LLM to generate targeted cognitive training recommendations:"
-    )
-
-    ai_payload = {
-        "assessment_type": "Gamified MoCA Confrontation Naming (Cantonese)",
-        "patient_metrics": {
-            "total_score": st.session_state.moca_naming_score,
-            "max_score": len(ITEMS),
-            "average_latency_seconds": avg_latency,
-            "accuracy_rate": f"{round((st.session_state.moca_naming_score / len(ITEMS)) * 100, 1)}%",
-        },
-        "item_breakdown": st.session_state.telemetry_logs,
-        "cognitive_domains_assessed": [
-            "Semantic Memory",
-            "Visual Object Recognition",
-            "Lexical Retrieval & Speech Production",
-        ],
-    }
-
-    st.json(ai_payload)
-
-    st.download_button(
-        "📥 Download Telemetry Log (.CSV)",
-        df.to_csv(index=False).encode("utf-8"),
-        f"moca_voice_telemetry_{int(time.time())}.csv",
-        "text/csv",
-    )
-
-    if st.button("🔄 重新開始 (Restart Assessment)"):
+    if st.button("再玩一次 (Play Again)"):
         st.session_state.stage = "intro"
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
+        st.session_state.last_transcript = ""
         st.query_params.clear()
         st.rerun()
+
+    with st.expander(
+        "🩺 Occupational Therapist / Speech Telemetry Dashboard", expanded=True
+    ):
+        st.subheader("MoCA Naming Sub-score (Spontaneous Confrontation)")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric(
+                "MoCA Proxy Naming Sub-score",
+                f"{st.session_state.moca_naming_score} / 3 Points",
+            )
+        with c2:
+            if st.session_state.telemetry_logs:
+                avg = pd.DataFrame(st.session_state.telemetry_logs)[
+                    "speech_latency_seconds"
+                ].mean()
+                st.metric("Avg. Speech Latency", f"{round(avg, 2)} seconds")
+            else:
+                st.metric("Avg. Speech Latency", "N/A")
+        df = pd.DataFrame(st.session_state.telemetry_logs)
+        st.dataframe(df)
+        if not df.empty:
+            st.download_button(
+                "📥 Download Speech Telemetry Log (.CSV)",
+                df.to_csv(index=False).encode("utf-8"),
+                f"moca_cantonese_speech_telemetry_{int(time.time())}.csv",
+                "text/csv",
+            )
