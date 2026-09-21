@@ -65,6 +65,7 @@ if "item_start_time" not in st.session_state:
 if "moca_naming_score" not in st.session_state:
     st.session_state.moca_naming_score = 0
 
+# Grade 1 = High familiarity, Grade 2 = Medium, Grade 3 = Low (MoCA Rhino equivalent)
 ITEMS = [
     {
         "id": "item_1",
@@ -96,6 +97,7 @@ def evaluate_cantonese_speech(spoken_text):
     """Evaluates Cantonese speech, updates MoCA score, and logs telemetry."""
     current_item = ITEMS[st.session_state.current_item_index]
     
+    # Calculate latency
     if st.session_state.item_start_time:
         elapsed_time = round(time.time() - st.session_state.item_start_time, 2)
     else:
@@ -103,6 +105,7 @@ def evaluate_cantonese_speech(spoken_text):
     
     clean_text = spoken_text.strip().replace(" ", "").replace("呢個係", "").replace("這是", "").replace("隻係", "").replace("個位是", "")
     
+    # Check if any synonym exists in spoken sentence or clean text
     is_correct = any(synonym in spoken_text or synonym in clean_text for synonym in current_item["acceptable_synonyms"])
     
     if is_correct:
@@ -111,6 +114,7 @@ def evaluate_cantonese_speech(spoken_text):
     else:
         st.session_state.show_tick_feedback = False
 
+    # Log telemetry
     st.session_state.telemetry_logs.append({
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "item_id": current_item["id"],
@@ -120,6 +124,7 @@ def evaluate_cantonese_speech(spoken_text):
         "speech_latency_seconds": elapsed_time
     })
 
+    # Prepare for next item
     st.session_state.pending_advance = True
 
 # --- STAGE 1: INTRO SCREEN ---
@@ -140,24 +145,44 @@ if st.session_state.stage == "intro":
         st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
         st.session_state.item_start_time = time.time()
+        st.query_params.clear()
         st.rerun()
 
 # --- STAGE 2: GAMEPLAY (CANTONESE VOICE RECOGNITION) ---
 elif st.session_state.stage == "gameplay":
     current_key = f"manual_in_{st.session_state.current_item_index}"
     
+    # Initialize session state value for the current input box if not present
+    if current_key not in st.session_state:
+        st.session_state[current_key] = ""
+
+    # 1. Catch incoming voice result and assign directly to input text box state
+    if "speech_result" in st.query_params:
+        transcript = st.query_params["speech_result"]
+        st.query_params.clear()
+        # Set transcript into current text box key
+        st.session_state[current_key] = transcript
+        st.rerun()
+
+    # Helper function to advance question safely
     def advance_to_next_item():
         st.session_state.show_tick_feedback = False
         st.session_state.pending_advance = False
+        st.query_params.clear()
+        
+        # Clean up key from session state
         if current_key in st.session_state:
             del st.session_state[current_key]
 
         if st.session_state.current_item_index + 1 < len(ITEMS):
             st.session_state.current_item_index += 1
             st.session_state.item_start_time = time.time()
+            next_key = f"manual_in_{st.session_state.current_item_index}"
+            st.session_state[next_key] = ""
         else:
             st.session_state.stage = "complete"
 
+    # Handle pending advance state (displays tick if correct, then advances)
     if st.session_state.get("pending_advance", False):
         if st.session_state.get("show_tick_feedback", False):
             st.success("✅ 正確！ (Correct!)", icon="✅")
@@ -167,26 +192,20 @@ elif st.session_state.stage == "gameplay":
 
     current_item = ITEMS[st.session_state.current_item_index]
 
+    # Display progress & stimulus
     st.markdown(f"<p style='font-size: 22px; text-align: center; color: #666;'>進度: {st.session_state.current_item_index + 1} / {len(ITEMS)}</p>", unsafe_allow_html=True)
     st.markdown("<h2 style='text-align: center;'>請大聲講出，這是什麼食材？</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; font-size: 18px; color: #2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係雞」）</p>", unsafe_allow_html=True)
     st.markdown(f"<div style='font-size: 130px; text-align: center; margin: 10px 0;'>{current_item['emoji']}</div>", unsafe_allow_html=True)
 
-    # Speech Component returning the transcript back to Python without URL reloading
-    speech_recognized = components.html(
+    # Speech Recognition HTML/JS Component
+    components.html(
         f"""
         <!DOCTYPE html>
+        <!-- Item Index: {st.session_state.current_item_index} -->
         <html>
         <head>
             <meta charset="utf-8">
-            <script>
-                function sendToStreamlit(value) {{
-                    window.parent.postMessage({{
-                        type: "streamlit:setComponentValue",
-                        value: value
-                    }}, "*");
-                }}
-            </script>
             <style>
                 .mic-btn {{
                     width: 100%;
@@ -205,7 +224,6 @@ elif st.session_state.stage == "gameplay":
             </style>
         </head>
         <body>
-            <!-- Item Index: {st.session_state.current_item_index} -->
             <button class="mic-btn" id="start-btn" onclick="startRecognition()">🎤 按此說話 (Tap & Say "呢個係...")</button>
             <div class="status-text" id="status">點擊上方按鈕並講出名稱</div>
 
@@ -228,7 +246,10 @@ elif st.session_state.stage == "gameplay":
                         document.getElementById('status').innerHTML = "✅ 聽到: <b>" + transcript + "</b>";
                         document.getElementById('start-btn').style.backgroundColor = "#388E3C";
                         
-                        sendToStreamlit(transcript);
+                        setTimeout(function() {{
+                            var cleanUrl = window.top.location.pathname + "?speech_result=" + encodeURIComponent(transcript);
+                            window.top.location.href = cleanUrl;
+                        }}, 300);
                     }};
 
                     recognition.onerror = function(event) {{
@@ -251,15 +272,9 @@ elif st.session_state.stage == "gameplay":
         height=150
     )
 
-    # Check if speech gave us a result, and pre-fill session state for input box
-    if speech_recognized and speech_recognized != st.session_state.get(f"last_rec_{st.session_state.current_item_index}"):
-        st.session_state[f"last_rec_{st.session_state.current_item_index}"] = speech_recognized
-        st.session_state[current_key] = speech_recognized
-        st.rerun()
-
     st.markdown("---")
     
-    # Text input pre-filled with recorded result
+    # Text box displaying recognized speech or allowing manual entry
     manual_input = st.text_input(
         "識別結果 / 手動輸入 (Recognized Text / Manual Input):", 
         key=current_key
@@ -288,8 +303,10 @@ elif st.session_state.stage == "complete":
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
+        st.query_params.clear()
         st.rerun()
 
+    # --- THERAPIST TELEMETRY DASHBOARD ---
     st.markdown("---")
     with st.expander("🩺 Occupational Therapist / Speech Telemetry Dashboard", expanded=True):
         st.subheader("MoCA Naming Sub-score (Spontaneous Confrontation)")
@@ -308,6 +325,7 @@ elif st.session_state.stage == "complete":
         df = pd.DataFrame(st.session_state.telemetry_logs)
         st.dataframe(df)
         
+        # CSV Export
         if not df.empty:
             csv = df.to_csv(index=False).encode('utf-8')
             st.download_button(
