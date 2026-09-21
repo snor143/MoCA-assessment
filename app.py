@@ -15,34 +15,33 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-if "stage" not in st.session_state: st.session_state.stage = "intro"
-if "current_item_index" not in st.session_state: st.session_state.current_item_index = 0
-if "telemetry_logs" not in st.session_state: st.session_state.telemetry_logs = []
-if "item_start_time" not in st.session_state: st.session_state.item_start_time = None
-if "moca_naming_score" not in st.session_state: st.session_state.moca_naming_score = 0
+for name, default in {
+    "stage": "intro", "current_item_index": 0, "telemetry_logs": [],
+    "item_start_time": None, "moca_naming_score": 0,
+}.items():
+    if name not in st.session_state:
+        st.session_state[name] = default
 
 ITEMS = [
     {"id": "item_1", "tier": "High Familiarity (Warmup)", "emoji": "🐓", "primary_name": "雞", "acceptable_synonyms": ["雞", "公雞", "母雞", "雞仔", "呢個係雞", "這是雞", "隻係雞"], "moca_weight": 1},
     {"id": "item_2", "tier": "Moderate Familiarity", "emoji": "🐙", "primary_name": "八爪魚", "acceptable_synonyms": ["八爪魚", "章魚", "呢個係八爪魚", "這是八爪魚", "隻係八爪魚"], "moca_weight": 1},
-    {"id": "item_3", "tier": "Low Familiarity (MoCA Rhino Equivalent)", "emoji": "🦥", "primary_name": "樹懶", "acceptable_synonyms": ["樹懶", "呢個係樹懶", "這是樹懶", "隻係樹懶"], "moca_weight": 1}
+    {"id": "item_3", "tier": "Low Familiarity (MoCA Rhino Equivalent)", "emoji": "🦥", "primary_name": "樹懶", "acceptable_synonyms": ["樹懶", "呢個係樹懶", "這是樹懶", "隻係樹懶"], "moca_weight": 1},
 ]
 
 
 def evaluate_cantonese_speech(spoken_text):
-    current_item = ITEMS[st.session_state.current_item_index]
-    elapsed_time = round(time.time() - st.session_state.item_start_time, 2) if st.session_state.item_start_time else 0.0
-    clean_text = spoken_text.strip().replace(" ", "").replace("呢個係", "").replace("這是", "").replace("隻係", "").replace("個位是", "")
-    is_correct = any(synonym in spoken_text or synonym in clean_text for synonym in current_item["acceptable_synonyms"])
-    st.session_state.show_tick_feedback = is_correct
-    if is_correct:
-        st.session_state.moca_naming_score += current_item["moca_weight"]
+    item = ITEMS[st.session_state.current_item_index]
+    elapsed = round(time.time() - st.session_state.item_start_time, 2) if st.session_state.item_start_time else 0.0
+    clean = spoken_text.strip().replace(" ", "").replace("呢個係", "").replace("這是", "").replace("隻係", "").replace("個位是", "")
+    correct = any(s in spoken_text or s in clean for s in item["acceptable_synonyms"])
+    st.session_state.show_tick_feedback = correct
+    if correct:
+        st.session_state.moca_naming_score += item["moca_weight"]
     st.session_state.telemetry_logs.append({
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "item_id": current_item["id"],
-        "target_name": current_item["primary_name"],
-        "user_spoken_raw": spoken_text,
-        "is_correct": is_correct,
-        "speech_latency_seconds": elapsed_time
+        "item_id": item["id"], "target_name": item["primary_name"],
+        "user_spoken_raw": spoken_text, "is_correct": correct,
+        "speech_latency_seconds": elapsed,
     })
     st.session_state.pending_advance = True
 
@@ -51,9 +50,9 @@ if st.session_state.stage == "intro":
     st.title("🛒 香港街市語音買菜 (HK Market Voice Explorer)")
     st.markdown("""
     <div class="instruction-card">
-        <h2>婆婆/伯伯，今日我們要去街市買菜！</h2>
-        <p style="font-size: 22px;">請睇睇螢幕上的食材，<b>用廣東話講出它的名字</b>。</p>
-        <p style="font-size: 18px; color: #555;">(例如說：「呢個係雞」或「八爪魚」)</p>
+      <h2>婆婆/伯伯，今日我們要去街市買菜！</h2>
+      <p style="font-size: 22px;">請睇睇螢幕上的食材，<b>用廣東話講出它的名字</b>。</p>
+      <p style="font-size: 18px; color: #555;">(例如說：「呢個係雞」或「八爪魚」)</p>
     </div>
     """, unsafe_allow_html=True)
     if st.button("開始買菜 (Start Voice Assessment)"):
@@ -66,17 +65,25 @@ if st.session_state.stage == "intro":
         st.rerun()
 
 elif st.session_state.stage == "gameplay":
-    current_key = f"manual_in_{st.session_state.current_item_index}"
+    index = st.session_state.current_item_index
+    current_key = f"manual_in_{index}"
+
+    # Read the result before creating the widget. Keep it in a separate pending
+    # value, then assign the widget key and rerun so Streamlit hydrates the
+    # browser input with the transcript instead of its previous empty value.
     transcript = st.query_params.get("speech_result")
     if transcript:
-        st.session_state[current_key] = transcript
+        st.session_state[current_key] = str(transcript)
+        st.session_state.last_transcript = str(transcript)
         st.query_params.clear()
+        st.rerun()
 
     def advance_to_next_item():
         st.session_state.show_tick_feedback = False
         st.session_state.pending_advance = False
+        st.session_state.pop("last_transcript", None)
         st.query_params.clear()
-        if st.session_state.current_item_index + 1 < len(ITEMS):
+        if index + 1 < len(ITEMS):
             st.session_state.current_item_index += 1
             st.session_state.item_start_time = time.time()
         else:
@@ -89,113 +96,105 @@ elif st.session_state.stage == "gameplay":
         advance_to_next_item()
         st.rerun()
 
-    current_item = ITEMS[st.session_state.current_item_index]
-    st.markdown(f"<p style='font-size: 22px; text-align: center; color: #666;'>進度: {st.session_state.current_item_index + 1} / {len(ITEMS)}</p>", unsafe_allow_html=True)
-    st.markdown("<h2 style='text-align: center;'>請大聲講出，這是什麼食材？</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; font-size: 18px; color: #2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係雞」）</p>", unsafe_allow_html=True)
-    st.markdown(f"<div style='font-size: 130px; text-align: center; margin: 10px 0;'>{current_item['emoji']}</div>", unsafe_allow_html=True)
+    item = ITEMS[index]
+    st.markdown(f"<p style='font-size:22px;text-align:center;color:#666;'>進度: {index + 1} / {len(ITEMS)}</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center;'>請大聲講出，這是什麼食材？</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center;font-size:18px;color:#2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係雞」）</p>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:130px;text-align:center;margin:10px 0;'>{item['emoji']}</div>", unsafe_allow_html=True)
+
+    if st.session_state.get("last_transcript"):
+        st.info(f"🎤 語音辨識結果：{st.session_state.last_transcript}")
 
     components.html(f"""
-    <!DOCTYPE html>
-    <html><head><meta charset="utf-8"><style>
-    .mic-btn {{ width: 100%; height: 85px; font-size: 24px; font-weight: bold; background-color: #E65100; color: white; border: none; border-radius: 18px; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,.15); }}
-    .mic-btn:active {{ background-color: #BF360C; }}
-    .status-text {{ font-size: 20px; font-family: sans-serif; color: #333; text-align: center; margin-top: 10px; }}
+    <!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    .mic-btn {{ width:100%; height:85px; font-size:24px; font-weight:bold; background:#E65100; color:white; border:0; border-radius:18px; cursor:pointer; box-shadow:0 4px 8px rgba(0,0,0,.15); }}
+    .status-text {{ font-size:20px; font-family:sans-serif; color:#333; text-align:center; margin-top:10px; }}
     </style></head><body>
-    <button class="mic-btn" id="start-btn" onclick="startRecognition()">🎤 按此說話 (Tap & Say "呢個係...")</button>
+    <button class="mic-btn" id="start-btn" type="button">🎤 按此說話 (Tap & Say "呢個係...")</button>
     <div class="status-text" id="status">點擊上方按鈕並講出名稱</div>
     <script>
-    var recognition = null;
-    var recognizing = false;
-    var navigatingWithResult = false;
-    var button = document.getElementById('start-btn');
-    var status = document.getElementById('status');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const button = document.getElementById('start-btn');
+    const status = document.getElementById('status');
+    let recognition = null;
+    let active = false;
+    let gotResult = false;
 
-    function readyToListen(message) {{
-        recognizing = false;
+    function ready(message) {{
+      active = false; gotResult = false;
+      button.disabled = false;
+      button.style.pointerEvents = 'auto';
+      button.style.backgroundColor = '#E65100';
+      button.innerHTML = '🎤 按此說話 (Tap & Say "呢個係...")';
+      status.textContent = message || '點擊上方按鈕並講出名稱';
+    }}
+
+    if (SpeechRecognition) {{
+      recognition = new SpeechRecognition();
+      recognition.lang = 'zh-HK';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.onstart = function() {{
+        active = true; gotResult = false;
         button.disabled = false;
         button.style.pointerEvents = 'auto';
-        button.style.backgroundColor = '#E65100';
-        button.innerHTML = '🎤 按此說話 (Tap & Say "呢個係...")';
-        status.innerHTML = message || '點擊上方按鈕並講出名稱';
-    }}
-
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {{
-        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognition = new SpeechRecognition();
-        recognition.lang = 'zh-HK';
-        recognition.continuous = false;
-        recognition.interimResults = false;
-
-        recognition.onstart = function() {{
-            recognizing = true;
-            button.disabled = false;
-            button.style.pointerEvents = 'auto';
-            button.innerHTML = '🔴 聆聽中... (Tap to stop)';
-            button.style.backgroundColor = '#D32F2F';
-            status.innerHTML = '🔴 正在聆聽中，請講話... (Listening...)';
-        }};
-
-        recognition.onresult = function(event) {{
-            var transcript = event.results[0][0].transcript;
-            navigatingWithResult = true;
-            recognizing = false;
-            status.innerHTML = '✅ 聽到: <b>' + transcript + '</b>';
-            button.style.backgroundColor = '#388E3C';
-            var parentUrl = new URL(window.parent.location.href);
-            parentUrl.searchParams.delete('speech_result');
-            parentUrl.searchParams.set('speech_result', transcript);
-            window.parent.location.assign(parentUrl.toString());
-        }};
-
-        recognition.onerror = function(event) {{
-            recognizing = false;
-            readyToListen('⚠️ 未能識別 (' + event.error + ') — 請再試一次');
-        }};
-
-        recognition.onend = function() {{
-            // onend fires when the microphone has stopped. Always unlock the
-            // button unless a successful result is already navigating the app.
-            if (!navigatingWithResult) readyToListen();
-        }};
+        button.style.backgroundColor = '#D32F2F';
+        button.innerHTML = '⏹️ 停止聆聽 (Stop)';
+        status.textContent = '🔴 正在聆聽中，請講話... (Listening...)';
+      }};
+      recognition.onresult = function(event) {{
+        gotResult = true; active = false;
+        const text = event.results[0][0].transcript;
+        status.textContent = '✅ 聽到: ' + text;
+        button.style.backgroundColor = '#388E3C';
+        const url = new URL(window.parent.location.href);
+        url.searchParams.set('speech_result', text);
+        window.parent.location.assign(url.toString());
+      }};
+      recognition.onerror = function(event) {{
+        active = false;
+        ready('⚠️ 未能識別 (' + event.error + ') — 請再試一次');
+      }};
+      recognition.onend = function() {{
+        // A failed/no-speech session must never remain labelled Listening.
+        // If a result was received, the parent navigation is already underway.
+        if (!gotResult) ready();
+      }};
     }} else {{
-        status.innerHTML = '❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)';
-        button.disabled = true;
+      button.disabled = true;
+      status.textContent = '❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)';
     }}
 
-    function startRecognition() {{
-        if (!recognition) return;
-        if (recognizing) {{
-            recognition.stop();
-            return;
-        }}
-        navigatingWithResult = false;
-        readyToListen();
-        try {{
-            recognition.start();
-        }} catch (error) {{
-            readyToListen('⚠️ 麥克風未能啟動 — 請再試一次');
-        }}
-    }}
+    button.addEventListener('click', function() {{
+      if (!recognition) return;
+      if (active) {{ recognition.stop(); return; }}
+      ready();
+      try {{ recognition.start(); }}
+      catch (error) {{ ready('⚠️ 麥克風未能啟動 — 請再試一次'); }}
+    }});
     </script></body></html>
     """, height=150)
 
     st.markdown("---")
-    manual_input = st.text_input("識別結果 / 手動輸入 (Recognized Text / Manual Input):", key=current_key, placeholder="語音結果會顯示在這裡；也可以手動輸入")
+    manual_input = st.text_input(
+        "識別結果 / 手動輸入 (Recognized Text / Manual Input):",
+        key=current_key,
+        placeholder="語音結果會顯示在這裡；也可以手動輸入",
+    )
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("👉 提交答案 / 下一題 (Submit / Next)", key=f"btn_next_{st.session_state.current_item_index}"):
+        if st.button("👉 提交答案 / 下一題 (Submit / Next)", key=f"btn_next_{index}"):
             evaluate_cantonese_speech(manual_input if manual_input.strip() else "未有說話")
             st.rerun()
     with col2:
-        if st.button("⏭️ 跳過 (Skip Item)", key=f"btn_skip_{st.session_state.current_item_index}"):
+        if st.button("⏭️ 跳過 (Skip Item)", key=f"btn_skip_{index}"):
             evaluate_cantonese_speech("跳過")
             st.rerun()
 
 elif st.session_state.stage == "complete":
     st.balloons()
     st.title("🎉 買菜完成！感謝您的幫忙！")
-    st.markdown("<p style='font-size: 24px;'>您已經成功將所有食材放入購物車。</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:24px;'>您已經成功將所有食材放入購物車。</p>", unsafe_allow_html=True)
     if st.button("再玩一次 (Play Again)"):
         st.session_state.stage = "intro"
         st.session_state.current_item_index = 0
@@ -206,15 +205,15 @@ elif st.session_state.stage == "complete":
     st.markdown("---")
     with st.expander("🩺 Occupational Therapist / Speech Telemetry Dashboard", expanded=True):
         st.subheader("MoCA Naming Sub-score (Spontaneous Confrontation)")
-        col1, col2 = st.columns(2)
-        with col1: st.metric("MoCA Proxy Naming Sub-score", f"{st.session_state.moca_naming_score} / 3 Points")
-        with col2:
+        c1, c2 = st.columns(2)
+        with c1: st.metric("MoCA Proxy Naming Sub-score", f"{st.session_state.moca_naming_score} / 3 Points")
+        with c2:
             if st.session_state.telemetry_logs:
-                avg_latency = pd.DataFrame(st.session_state.telemetry_logs)["speech_latency_seconds"].mean()
-                st.metric("Avg. Speech Latency", f"{round(avg_latency, 2)} seconds")
+                avg = pd.DataFrame(st.session_state.telemetry_logs)["speech_latency_seconds"].mean()
+                st.metric("Avg. Speech Latency", f"{round(avg, 2)} seconds")
             else: st.metric("Avg. Speech Latency", "N/A")
         st.subheader("Raw Speech Telemetry Stream (.csv)")
         df = pd.DataFrame(st.session_state.telemetry_logs)
         st.dataframe(df)
         if not df.empty:
-            st.download_button(label="📥 Download Speech Telemetry Log (.CSV)", data=df.to_csv(index=False).encode("utf-8"), file_name=f"moca_cantonese_speech_telemetry_{int(time.time())}.csv", mime="text/csv")
+            st.download_button("📥 Download Speech Telemetry Log (.CSV)", df.to_csv(index=False).encode("utf-8"), f"moca_cantonese_speech_telemetry_{int(time.time())}.csv", "text/csv")
