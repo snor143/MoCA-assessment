@@ -152,16 +152,15 @@ if st.session_state.stage == "intro":
 elif st.session_state.stage == "gameplay":
     current_key = f"manual_in_{st.session_state.current_item_index}"
     
-    # Ensure key exists in session state
+    # Initialize session state value for the current input box if not present
     if current_key not in st.session_state:
         st.session_state[current_key] = ""
 
-    # Catch incoming voice result from query parameters and populate input box ONLY
+    # 1. Catch incoming voice result and assign directly to input text box state
     if "speech_result" in st.query_params:
         transcript = st.query_params["speech_result"]
-        # Clear query parameters immediately so old results don't linger
         st.query_params.clear()
-        # Set text input value directly in session state for display
+        # Set transcript into current text box key
         st.session_state[current_key] = transcript
         st.rerun()
 
@@ -171,14 +170,13 @@ elif st.session_state.stage == "gameplay":
         st.session_state.pending_advance = False
         st.query_params.clear()
         
-        # Clear current question key from session state
+        # Clean up key from session state
         if current_key in st.session_state:
             del st.session_state[current_key]
 
         if st.session_state.current_item_index + 1 < len(ITEMS):
             st.session_state.current_item_index += 1
             st.session_state.item_start_time = time.time()
-            # Initialize next question input box as empty
             next_key = f"manual_in_{st.session_state.current_item_index}"
             st.session_state[next_key] = ""
         else:
@@ -276,7 +274,7 @@ elif st.session_state.stage == "gameplay":
 
     st.markdown("---")
     
-    # Input text box synced dynamically per question
+    # Text box displaying recognized speech or allowing manual entry
     manual_input = st.text_input(
         "識別結果 / 手動輸入 (Recognized Text / Manual Input):", 
         key=current_key
