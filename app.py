@@ -72,7 +72,7 @@ ITEMS = [
         "tier": "High Familiarity (Warmup)",
         "emoji": "🐓",
         "primary_name": "雞",
-        "acceptable_synonyms": ["雞", "公雞", "母雞", "雞仔", "呢個係雞", "這是雞", "隻係雞"],
+        "acceptable_synonyms": ["雞", "公雞", "母雞", "雞仔"],
         "moca_weight": 1
     },
     {
@@ -80,7 +80,7 @@ ITEMS = [
         "tier": "Moderate Familiarity",
         "emoji": "🐙",
         "primary_name": "八爪魚",
-        "acceptable_synonyms": ["八爪魚", "章魚", "呢個係八爪魚", "這是八爪魚", "隻係八爪魚"],
+        "acceptable_synonyms": ["八爪魚"],
         "moca_weight": 1
     },
     {
@@ -88,7 +88,7 @@ ITEMS = [
         "tier": "Low Familiarity (MoCA Rhino Equivalent)",
         "emoji": "🦥",
         "primary_name": "樹懶",
-        "acceptable_synonyms": ["樹懶", "呢個係樹懶", "這是樹懶", "隻係樹懶"],
+        "acceptable_synonyms": ["樹懶"],
         "moca_weight": 1
     }
 ]
@@ -103,7 +103,7 @@ def evaluate_cantonese_speech(spoken_text):
     else:
         elapsed_time = 0.0
     
-    clean_text = spoken_text.strip().replace(" ", "").replace("呢個係", "").replace("這是", "").replace("隻係", "").replace("個位是", "")
+    clean_text = spoken_text.strip().replace(" ", "").replace("呢個係", "").replace("這是", "").replace("個位是", "")
     
     # Check if any synonym exists in spoken sentence or clean text
     is_correct = any(synonym in spoken_text or synonym in clean_text for synonym in current_item["acceptable_synonyms"])
@@ -126,7 +126,7 @@ def evaluate_cantonese_speech(spoken_text):
 
     # Prepare for next item
     st.session_state.pending_advance = True
-
+    
 # --- STAGE 1: INTRO SCREEN ---
 if st.session_state.stage == "intro":
     st.title("🛒 香港街市語音買菜 (HK Market Voice Explorer)")
@@ -134,18 +134,14 @@ if st.session_state.stage == "intro":
     st.markdown("""
         <div class="instruction-card">
             <h2>婆婆/伯伯，今日我們要去街市買菜！</h2>
-            <p style="font-size: 22px;">請睇睇螢幕上的圖案，<b>用廣東話講出它的名字</b>。</p>
-            <p style="font-size: 18px; color: #555;">(例如說：「呢個係雞」或「八爪魚」)</p>
+            <p style="font-size: 22px;">請睇睇螢幕上的食材，<b>用廣東話講出它的名字</b>。</p>
+            <p style="font-size: 18px; color: #555;">(例如說：「這是鮮橙」或「苦瓜」)</p>
         </div>
     """, unsafe_allow_html=True)
     
     if st.button("開始買菜 (Start Voice Assessment)"):
         st.session_state.stage = "gameplay"
-        st.session_state.current_item_index = 0
-        st.session_state.telemetry_logs = []
-        st.session_state.moca_naming_score = 0
         st.session_state.item_start_time = time.time()
-        st.query_params.clear()
         st.rerun()
 
 # --- STAGE 2: GAMEPLAY (CANTONESE VOICE RECOGNITION) ---
@@ -153,8 +149,8 @@ elif st.session_state.stage == "gameplay":
     # 1. Listen for voice recognition results passed from JS via URL parameters
     if "speech_result" in st.query_params:
         spoken_transcript = st.query_params["speech_result"]
-        # Clear URL parameters immediately
-        st.query_params.clear()
+        # Clear URL parameter
+        del st.query_params["speech_result"]
         # Evaluate speech and update state
         evaluate_cantonese_speech(spoken_transcript)
         st.rerun()
@@ -163,7 +159,6 @@ elif st.session_state.stage == "gameplay":
     def advance_to_next_item():
         st.session_state.show_tick_feedback = False
         st.session_state.pending_advance = False
-        st.query_params.clear()
         if st.session_state.current_item_index + 1 < len(ITEMS):
             st.session_state.current_item_index += 1
             st.session_state.item_start_time = time.time()
@@ -182,13 +177,13 @@ elif st.session_state.stage == "gameplay":
 
     # Display progress
     st.markdown(f"<p style='font-size: 22px; text-align: center; color: #666;'>進度: {st.session_state.current_item_index + 1} / {len(ITEMS)}</p>", unsafe_allow_html=True)
-    st.markdown("<h2 style='text-align: center;'>請大聲講出，這是什麼？</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; font-size: 18px; color: #2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係雞」）</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center;'>請大聲講出，這是什麼食材？</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; font-size: 18px; color: #2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係苦瓜」）</p>", unsafe_allow_html=True)
 
     # Visual stimulus
     st.markdown(f"<div style='font-size: 130px; text-align: center; margin: 10px 0;'>{current_item['emoji']}</div>", unsafe_allow_html=True)
 
-    # Speech Recognition HTML/JS Component (keyed dynamically to unmount/reset frame on each question)
+    # Speech Recognition HTML/JS Component
     components.html(
         f"""
         <!DOCTYPE html>
@@ -235,12 +230,10 @@ elif st.session_state.stage == "gameplay":
                         document.getElementById('status').innerHTML = "✅ 聽到: <b>" + transcript + "</b>";
                         document.getElementById('start-btn').style.backgroundColor = "#388E3C";
                         
-                        // Clean history and pass transcript directly to Streamlit via URL
+                        // Pass Cantonese speech transcript directly to Streamlit Python via URL
                         setTimeout(function() {{
-                            var cleanUrl = window.top.location.pathname + "?speech_result=" + encodeURIComponent(transcript);
-                            window.top.history.replaceState(null, '', cleanUrl);
-                            window.top.location.href = cleanUrl;
-                        }}, 500);
+                            window.top.location.href = window.top.location.pathname + "?speech_result=" + encodeURIComponent(transcript);
+                        }}, 600);
                     }};
 
                     recognition.onerror = function(event) {{
@@ -260,13 +253,12 @@ elif st.session_state.stage == "gameplay":
         </body>
         </html>
         """,
-        height=150,
-        key=f"mic_component_{st.session_state.current_item_index}"
+        height=150
     )
 
     st.markdown("---")
     
-    # Manual text input backup (keyed per item)
+    # Manual text input backup
     manual_input = st.text_input(
         "手動輸入 / 備用答案 (Manual Backup Input):", 
         key=f"manual_in_{st.session_state.current_item_index}"
@@ -295,7 +287,6 @@ elif st.session_state.stage == "complete":
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
-        st.query_params.clear()
         st.rerun()
 
     # --- THERAPIST TELEMETRY DASHBOARD ---
@@ -307,22 +298,18 @@ elif st.session_state.stage == "complete":
         with col1:
             st.metric("MoCA Proxy Naming Sub-score", f"{st.session_state.moca_naming_score} / 3 Points")
         with col2:
-            if len(st.session_state.telemetry_logs) > 0:
-                avg_latency = pd.DataFrame(st.session_state.telemetry_logs)["speech_latency_seconds"].mean()
-                st.metric("Avg. Speech Latency", f"{round(avg_latency, 2)} seconds")
-            else:
-                st.metric("Avg. Speech Latency", "N/A")
+            avg_latency = pd.DataFrame(st.session_state.telemetry_logs)["speech_latency_seconds"].mean()
+            st.metric("Avg. Speech Latency", f"{round(avg_latency, 2)} seconds")
             
         st.subheader("Raw Speech Telemetry Stream (.csv)")
         df = pd.DataFrame(st.session_state.telemetry_logs)
         st.dataframe(df)
         
         # CSV Export
-        if not df.empty:
-            csv = df.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Download Speech Telemetry Log (.CSV)",
-                data=csv,
-                file_name=f"moca_cantonese_speech_telemetry_{int(time.time())}.csv",
-                mime="text/csv"
-            )
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Download Speech Telemetry Log (.CSV)",
+            data=csv,
+            file_name=f"moca_cantonese_speech_telemetry_{int(time.time())}.csv",
+            mime="text/csv"
+        )
