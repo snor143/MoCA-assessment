@@ -25,10 +25,6 @@ st.markdown("""
         background-color: #F0F7F4; padding: 24px; border-radius: 16px;
         border-left: 8px solid #2E7D32; margin-bottom: 24px;
     }
-    .voice-box {
-        background-color: #E8F5E9; padding: 20px; border-radius: 16px;
-        text-align: center; border: 2px dashed #4CAF50; margin: 15px 0;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -67,14 +63,11 @@ ITEMS = [
 
 
 def evaluate_cantonese_speech(spoken_text):
-    """Evaluate the submitted text, update the MoCA score, and log telemetry."""
     current_item = ITEMS[st.session_state.current_item_index]
     elapsed_time = (
         round(time.time() - st.session_state.item_start_time, 2)
         if st.session_state.item_start_time else 0.0
     )
-
-    # Normalize only for comparison; retain the original transcript in telemetry.
     clean_text = (
         spoken_text.strip().replace(" ", "")
         .replace("呢個係", "").replace("這是", "")
@@ -126,8 +119,9 @@ if st.session_state.stage == "intro":
 elif st.session_state.stage == "gameplay":
     current_key = f"manual_in_{st.session_state.current_item_index}"
 
-    # The browser returns here with the transcript in the URL. Store it before
-    # creating the text_input widget, so Streamlit displays it in that widget.
+    # Receive the transcript before constructing st.text_input. The JavaScript
+    # below performs a full parent-page navigation (rather than using history
+    # only), which makes Streamlit rerun and reliably hydrate this widget.
     transcript = st.query_params.get("speech_result")
     if transcript:
         st.session_state[current_key] = transcript
@@ -185,8 +179,10 @@ elif st.session_state.stage == "gameplay":
         var recognition;
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {{
             var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition(); recognition.lang = 'zh-HK';
-            recognition.continuous = false; recognition.interimResults = false;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-HK';
+            recognition.continuous = false;
+            recognition.interimResults = false;
             recognition.onstart = function() {{
                 document.getElementById('status').innerHTML = '🔴 正在聆聽中，請講話... (Listening...)';
                 document.getElementById('start-btn').style.backgroundColor = '#D32F2F';
@@ -195,17 +191,27 @@ elif st.session_state.stage == "gameplay":
                 var transcript = event.results[0][0].transcript;
                 document.getElementById('status').innerHTML = '✅ 聽到: <b>' + transcript + '</b>';
                 document.getElementById('start-btn').style.backgroundColor = '#388E3C';
-                setTimeout(function() {{
-                    var cleanUrl = window.top.location.pathname + '?speech_result=' + encodeURIComponent(transcript);
-                    window.top.location.href = cleanUrl;
-                }}, 400);
+
+                // Keep the deployed app path/query parameters intact. Do not
+                // use setTimeout or history.replaceState: those do not trigger
+                // a reliable Streamlit rerun from a sandboxed component iframe.
+                var parentUrl = new URL(window.parent.location.href);
+                parentUrl.search = '';
+                parentUrl.searchParams.set('speech_result', transcript);
+                window.parent.location.assign(parentUrl.toString());
             }};
             recognition.onerror = function(event) {{
                 document.getElementById('status').innerHTML = '⚠️ 未能識別，請再試一次 (Error: ' + event.error + ')';
                 document.getElementById('start-btn').style.backgroundColor = '#E65100';
             }};
-        }} else {{ document.getElementById('status').innerHTML = '❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)'; }}
-        function startRecognition() {{ if (recognition) {{ try {{ recognition.start(); }} catch(e) {{ recognition.stop(); recognition.start(); }} }} }}
+        }} else {{
+            document.getElementById('status').innerHTML = '❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)';
+        }}
+        function startRecognition() {{
+            if (recognition) {{
+                try {{ recognition.start(); }} catch(e) {{ recognition.stop(); recognition.start(); }}
+            }}
+        }}
         </script></body></html>
         """,
         height=150
@@ -221,8 +227,6 @@ elif st.session_state.stage == "gameplay":
     col1, col2 = st.columns(2)
     with col1:
         if st.button("👉 提交答案 / 下一題 (Submit / Next)", key=f"btn_next_{st.session_state.current_item_index}"):
-            # This is the only point at which the answer is scored. A transcript
-            # shown in the input is not scored until the user presses this button.
             evaluate_cantonese_speech(manual_input if manual_input.strip() else "未有說話")
             st.rerun()
     with col2:
