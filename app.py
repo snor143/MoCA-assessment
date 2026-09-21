@@ -132,14 +132,20 @@ elif st.session_state.stage == "gameplay":
     submission = st.query_params.get("answer_submission")
     skip = st.query_params.get("skip_item")
 
-    # Process submission or skip action
+    # FIXED: Process submission/skip and clear URL parameters directly via st.query_params
     if submission is not None or skip is not None:
         answer = "跳過" if skip is not None else str(submission)
         correct = evaluate_answer(answer)
-        st.query_params.clear()
+        
+        # Clear query parameters immediately before advancing state
+        for param in ["answer_submission", "skip_item"]:
+            if param in st.query_params:
+                del st.query_params[param]
+                
         if correct:
             st.success("✅ 正確！ (Correct!)", icon="✅")
             time.sleep(0.8)
+        
         advance_item()
         st.rerun()
 
@@ -164,7 +170,7 @@ elif st.session_state.stage == "gameplay":
         unsafe_allow_html=True,
     )
 
-    # HTML Component with Local JS Speech Sync
+    # HTML Component with Local JS Speech Sync & Clean URL Pusher
     components.html(
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
@@ -192,7 +198,6 @@ elif st.session_state.stage == "gameplay":
     const mic = document.getElementById('mic'), status = document.getElementById('status'), answer = document.getElementById('answer'), display = document.getElementById('display');
     let recognition = null, listening = false;
 
-    // Safely updates URL search params to reload Streamlit Python state
     function go(name, value) {{
       const search = '?' + encodeURIComponent(name) + '=' + encodeURIComponent(value);
       try {{
@@ -233,7 +238,6 @@ elif st.session_state.stage == "gameplay":
           setMicReady('⚠️ 沒有聽到內容 — 請再試一次');
           return;
         }}
-        // Update input fields LOCALLY without triggering a page reload
         answer.value = text;
         display.textContent = text;
         setMicReady('✅ 聽到: ' + text);
@@ -264,7 +268,6 @@ elif st.session_state.stage == "gameplay":
       }}
     }};
 
-    // Navigation only happens on Submit or Skip button clicks
     document.getElementById('submit').onclick = (e) => {{
       e.preventDefault();
       go('answer_submission', answer.value);
