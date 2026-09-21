@@ -152,14 +152,16 @@ if st.session_state.stage == "intro":
 elif st.session_state.stage == "gameplay":
     current_key = f"manual_in_{st.session_state.current_item_index}"
     
-    # 1. Catch incoming voice result from query parameters
+    # 1. Catch incoming voice result from JS via query parameters
     if "speech_result" in st.query_params:
         transcript = st.query_params["speech_result"]
-        # Clear query parameters immediately so old results don't linger
+        # Clear URL query parameters immediately
         st.query_params.clear()
-        # Set text input value directly in session state
+        
+        # WRITE VOICE RESULT DIRECTLY TO THE TEXT INPUT FIELD
         st.session_state[current_key] = transcript
-        # Evaluate answer immediately
+        
+        # Evaluate speech answer immediately
         evaluate_cantonese_speech(transcript)
         st.rerun()
 
@@ -190,7 +192,7 @@ elif st.session_state.stage == "gameplay":
     st.markdown("<p style='text-align: center; font-size: 18px; color: #2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係雞」）</p>", unsafe_allow_html=True)
     st.markdown(f"<div style='font-size: 130px; text-align: center; margin: 10px 0;'>{current_item['emoji']}</div>", unsafe_allow_html=True)
 
-    # Speech Recognition HTML/JS Component (Includes index comment to force dynamic re-render)
+    # Speech Recognition HTML/JS Component
     components.html(
         f"""
         <!DOCTYPE html>
@@ -238,7 +240,7 @@ elif st.session_state.stage == "gameplay":
                         document.getElementById('status').innerHTML = "✅ 聽到: <b>" + transcript + "</b>";
                         document.getElementById('start-btn').style.backgroundColor = "#388E3C";
                         
-                        // Clean history state and pass transcript to Streamlit
+                        // Clean history state and pass transcript to Streamlit URL
                         setTimeout(function() {{
                             var cleanUrl = window.top.location.pathname + "?speech_result=" + encodeURIComponent(transcript);
                             window.top.history.replaceState(null, '', cleanUrl);
@@ -268,7 +270,7 @@ elif st.session_state.stage == "gameplay":
 
     st.markdown("---")
     
-    # Input text box synced dynamically per question
+    # Text input box dynamically populated by the spoken word
     manual_input = st.text_input(
         "識別結果 / 手動輸入 (Recognized Text / Manual Input):", 
         key=current_key
