@@ -13,44 +13,18 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# FIXED CSS: Ensures ALL Streamlit buttons have solid backgrounds
 st.markdown(
     """
 <style>
 .main { background-color:#FFFDF9; }
+.stButton>button { width:100%; height:70px; font-size:22px !important; font-weight:bold; border-radius:16px; background:#2E7D32; color:white; border:0; margin-bottom:12px; }
+.stButton>button:hover { background:#1B5E20; }
 .instruction-card { background:#F0F7F4; padding:24px; border-radius:16px; border-left:8px solid #2E7D32; margin-bottom:24px; }
-
-/* Default styling for ALL Streamlit buttons (Start, Play Again, Submit) */
-div.stButton > button {
-    width: 100% !important;
-    height: 65px !important;
-    font-size: 22px !important;
-    font-weight: bold !important;
-    border-radius: 16px !important;
-    border: 0 !important;
-    background-color: #2E7D32 !important;
-    color: white !important;
-    margin-top: 10px !important;
-}
-
-div.stButton > button:hover {
-    background-color: #1B5E20 !important;
-    color: white !important;
-}
-
-/* Specific styling for Skip Button (Column 2) */
-div[data-testid="stColumn"]:nth-child(2) div.stButton > button {
-    background-color: #607D8B !important;
-}
-div[data-testid="stColumn"]:nth-child(2) div.stButton > button:hover {
-    background-color: #455A64 !important;
-}
 </style>
 """,
     unsafe_allow_html=True,
 )
 
-# Session State Initialization
 for key, value in {
     "stage": "intro",
     "current_item_index": 0,
@@ -128,7 +102,6 @@ def advance_item():
         st.session_state.stage = "complete"
 
 
-# STAGE 1: INTRO
 if st.session_state.stage == "intro":
     st.title("🛒 香港街市語音買菜 (HK Market Voice Explorer)")
     st.markdown(
@@ -150,20 +123,19 @@ if st.session_state.stage == "intro":
         st.query_params.clear()
         st.rerun()
 
-# STAGE 2: GAMEPLAY
 elif st.session_state.stage == "gameplay":
     index = st.session_state.current_item_index
+    current_key = f"input_{index}"
 
-    # Check for speech recognition or input updates from iframe
+    # Process transcript sent via query params from iframe
     if "speech_result" in st.query_params:
         transcript = str(st.query_params["speech_result"])
         st.query_params.clear()
         st.session_state.last_transcript = transcript
+        st.session_state[current_key] = transcript
         st.rerun()
 
     item = ITEMS[index]
-    initial = html.escape(st.session_state.last_transcript, quote=True)
-    displayed = html.escape(st.session_state.last_transcript or "尚未有語音結果")
 
     st.markdown(
         f"<p style='font-size:22px;text-align:center;color:#666;'>進度: {index+1} / {len(ITEMS)}</p>",
@@ -174,7 +146,7 @@ elif st.session_state.stage == "gameplay":
         unsafe_allow_html=True,
     )
     st.markdown(
-        "<p style='font-size:18px;text-align:center;color:#2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係蝴蝶」）</p>",
+        "<p style='text-align:center;font-size:18px;color:#2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係蝴蝶」）</p>",
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -182,43 +154,34 @@ elif st.session_state.stage == "gameplay":
         unsafe_allow_html=True,
     )
 
-    # HTML Component: Voice Recognition + Auto-sync Textarea
+    # Isolated Voice Capture Component
     components.html(
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
     body{{margin:0;font-family:sans-serif}}
-    button{{width:100%;height:65px;font-size:22px;font-weight:bold;color:white;border:0;border-radius:16px;cursor:pointer;background:#2E7D32}}
+    button{{width:100%;height:75px;font-size:24px;font-weight:bold;color:white;border:0;border-radius:16px;cursor:pointer;background:#E65100;box-shadow:0px 4px 8px rgba(0,0,0,0.15)}}
+    button:active{{background:#BF360C}}
     button:disabled{{opacity:.65;cursor:wait}}
-    .status{{font-size:20px;text-align:center;margin:8px 0;color:#333}}
-    label{{display:block;font-size:18px;margin:10px 0 6px}}
-    textarea{{box-sizing:border-box;width:100%;min-height:75px;padding:12px;font-size:22px;border:2px solid #4CAF50;border-radius:12px;resize:vertical}}
-    .display{{background:#E8F5E9;padding:12px;border-radius:12px;font-size:20px;margin:10px 0}}
+    .status{{font-size:20px;text-align:center;margin-top:10px;color:#333}}
     </style></head><body>
     <button id="mic" type="button">🎤 按此說話 (Tap & Say)</button>
     <div class="status" id="status">點擊上方按鈕並講出名稱</div>
-    <div class="display">🎤 語音結果：<span id="display">{displayed}</span></div>
-    <label for="answer">答案（可修改或手動輸入）：</label>
-    <textarea id="answer" placeholder="語音結果會顯示在這裡；也可以手動輸入">{initial}</textarea>
-
     <script>
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const mic = document.getElementById('mic'), status = document.getElementById('status'), answer = document.getElementById('answer');
+    const mic = document.getElementById('mic'), status = document.getElementById('status');
     let recognition = null, listening = false;
 
-    // Send data to main window URL to reload Streamlit Python state
-    function syncText(text) {{
-        const param = '?speech_result=' + encodeURIComponent(text);
+    function sendTranscript(text) {{
         try {{
-            window.parent.location.search = param;
+            window.parent.postMessage({{type: 'streamlit:setComponentValue', value: text}}, '*');
+            const url = new URL(window.top.location.href);
+            url.search = '';
+            url.searchParams.set('speech_result', text);
+            window.top.location.href = url.toString();
         }} catch(e) {{
-            window.location.search = param;
+            window.parent.location.href = "?speech_result=" + encodeURIComponent(text);
         }}
     }}
-
-    // Sync manual text changes when user finishes editing
-    answer.onchange = () => {{
-        syncText(answer.value);
-    }};
 
     if(SR) {{
         recognition = new SR();
@@ -229,7 +192,7 @@ elif st.session_state.stage == "gameplay":
         recognition.onstart = () => {{
             listening = true;
             mic.style.background = '#D32F2F';
-            mic.textContent = '⏹️ 正在聆聽中... (Listening)';
+            mic.textContent = '⏹️ 正在聆聽中... (Listening...)';
             status.textContent = '🔴 正在聆聽中，請講話...';
         }};
 
@@ -238,18 +201,18 @@ elif st.session_state.stage == "gameplay":
             if(!text) {{
                 status.textContent = '⚠️ 沒有聽到內容 — 請再試一次';
                 listening = false;
-                mic.style.background = '#2E7D32';
+                mic.style.background = '#E65100';
                 mic.textContent = '🎤 按此說話 (Tap & Say)';
                 return;
             }}
             status.textContent = '✅ 聽到: ' + text;
             mic.style.background = '#388E3C';
-            syncText(text);
+            setTimeout(() => sendTranscript(text), 300);
         }};
 
         recognition.onerror = (event) => {{
             listening = false;
-            mic.style.background = '#2E7D32';
+            mic.style.background = '#E65100';
             mic.textContent = '🎤 按此說話 (Tap & Say)';
             status.textContent = '⚠️ 未能識別 (' + event.error + ') — 請再試一次';
         }};
@@ -257,7 +220,7 @@ elif st.session_state.stage == "gameplay":
         recognition.onend = () => {{
             if(listening) {{
                 listening = false;
-                mic.style.background = '#2E7D32';
+                mic.style.background = '#E65100';
                 mic.textContent = '🎤 按此說話 (Tap & Say)';
             }}
         }};
@@ -276,18 +239,22 @@ elif st.session_state.stage == "gameplay":
     }};
     </script></body></html>
     """,
-        height=310,
+        height=130,
     )
 
-    # Native Streamlit Action Buttons
-    col1, col2 = st.columns(2)
-    with col1:
+    st.markdown("---")
+
+    # Native Streamlit Controls
+    user_answer = st.text_input(
+        "答案（可修改或手動輸入）：",
+        key=current_key,
+        placeholder="語音結果會顯示在這裡；也可以手動輸入",
+    )
+
+    c1, c2 = st.columns(2)
+    with c1:
         if st.button("👉 提交答案 / 下一題", key=f"sub_{index}"):
-            ans = (
-                st.session_state.last_transcript.strip()
-                if st.session_state.last_transcript.strip()
-                else "未有說話"
-            )
+            ans = user_answer.strip() if user_answer.strip() else "未有說話"
             correct = evaluate_answer(ans)
             if correct:
                 st.success("✅ 正確！ (Correct!)", icon="✅")
@@ -295,13 +262,12 @@ elif st.session_state.stage == "gameplay":
             advance_item()
             st.rerun()
 
-    with col2:
+    with c2:
         if st.button("⏭️ 跳過", key=f"skip_{index}"):
             evaluate_answer("跳過")
             advance_item()
             st.rerun()
 
-# STAGE 3: COMPLETE
 elif st.session_state.stage == "complete":
     st.balloons()
     st.title("🎉 完成任務！感謝您的幫忙！")
