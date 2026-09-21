@@ -4,20 +4,15 @@ import pandas as pd
 from datetime import datetime
 import streamlit.components.v1 as components
 
-st.set_page_config(
-    page_title="HK Supermarket Explorer - Voice Naming",
-    page_icon="🛒",
-    layout="centered",
-    initial_sidebar_state="collapsed"
-)
+st.set_page_config(page_title="HK Supermarket Explorer - Voice Naming", page_icon="🛒", layout="centered", initial_sidebar_state="collapsed")
 
 st.markdown("""
-    <style>
-    .main { background-color: #FFFDF9; }
-    .stButton>button { width: 100%; height: 70px; font-size: 22px !important; font-weight: bold; border-radius: 16px; background-color: #2E7D32; color: white; border: none; margin-bottom: 12px; }
-    .stButton>button:hover { background-color: #1B5E20; }
-    .instruction-card { background-color: #F0F7F4; padding: 24px; border-radius: 16px; border-left: 8px solid #2E7D32; margin-bottom: 24px; }
-    </style>
+<style>
+.main { background-color: #FFFDF9; }
+.stButton>button { width: 100%; height: 70px; font-size: 22px !important; font-weight: bold; border-radius: 16px; background-color: #2E7D32; color: white; border: none; margin-bottom: 12px; }
+.stButton>button:hover { background-color: #1B5E20; }
+.instruction-card { background-color: #F0F7F4; padding: 24px; border-radius: 16px; border-left: 8px solid #2E7D32; margin-bottom: 24px; }
+</style>
 """, unsafe_allow_html=True)
 
 if "stage" not in st.session_state: st.session_state.stage = "intro"
@@ -36,7 +31,7 @@ ITEMS = [
 def evaluate_cantonese_speech(spoken_text):
     current_item = ITEMS[st.session_state.current_item_index]
     elapsed_time = round(time.time() - st.session_state.item_start_time, 2) if st.session_state.item_start_time else 0.0
-    clean_text = (spoken_text.strip().replace(" ", "").replace("呢個係", "").replace("這是", "").replace("隻係", "").replace("個位是", ""))
+    clean_text = spoken_text.strip().replace(" ", "").replace("呢個係", "").replace("這是", "").replace("隻係", "").replace("個位是", "")
     is_correct = any(synonym in spoken_text or synonym in clean_text for synonym in current_item["acceptable_synonyms"])
     st.session_state.show_tick_feedback = is_correct
     if is_correct:
@@ -55,11 +50,11 @@ def evaluate_cantonese_speech(spoken_text):
 if st.session_state.stage == "intro":
     st.title("🛒 香港街市語音買菜 (HK Market Voice Explorer)")
     st.markdown("""
-        <div class="instruction-card">
-            <h2>婆婆/伯伯，今日我們要去街市買菜！</h2>
-            <p style="font-size: 22px;">請睇睇螢幕上的食材，<b>用廣東話講出它的名字</b>。</p>
-            <p style="font-size: 18px; color: #555;">(例如說：「呢個係雞」或「八爪魚」)</p>
-        </div>
+    <div class="instruction-card">
+        <h2>婆婆/伯伯，今日我們要去街市買菜！</h2>
+        <p style="font-size: 22px;">請睇睇螢幕上的食材，<b>用廣東話講出它的名字</b>。</p>
+        <p style="font-size: 18px; color: #555;">(例如說：「呢個係雞」或「八爪魚」)</p>
+    </div>
     """, unsafe_allow_html=True)
     if st.button("開始買菜 (Start Voice Assessment)"):
         st.session_state.stage = "gameplay"
@@ -72,10 +67,6 @@ if st.session_state.stage == "intro":
 
 elif st.session_state.stage == "gameplay":
     current_key = f"manual_in_{st.session_state.current_item_index}"
-
-    # Set the widget key in the same run in which the widget is rendered.
-    # Do not rerun here: rerunning can cause the browser widget to restore its
-    # old frontend value before the query-string value is applied.
     transcript = st.query_params.get("speech_result")
     if transcript:
         st.session_state[current_key] = transcript
@@ -105,74 +96,92 @@ elif st.session_state.stage == "gameplay":
     st.markdown(f"<div style='font-size: 130px; text-align: center; margin: 10px 0;'>{current_item['emoji']}</div>", unsafe_allow_html=True)
 
     components.html(f"""
-        <!DOCTYPE html>
-        <!-- Item Index: {st.session_state.current_item_index} -->
-        <html><head><meta charset="utf-8"><style>
-        .mic-btn {{ width: 100%; height: 85px; font-size: 24px; font-weight: bold; background-color: #E65100; color: white; border: none; border-radius: 18px; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,.15); }}
-        .status-text {{ font-size: 20px; font-family: sans-serif; color: #333; text-align: center; margin-top: 10px; }}
-        </style></head><body>
-        <button class="mic-btn" id="start-btn" onclick="startRecognition()">🎤 按此說話 (Tap & Say "呢個係...")</button>
-        <div class="status-text" id="status">點擊上方按鈕並講出名稱</div>
-        <script>
-        var recognition;
-        var button = document.getElementById('start-btn');
-        var status = document.getElementById('status');
-        function readyToListen() {{
-            status.innerHTML = '點擊上方按鈕並講出名稱';
-            button.innerHTML = '🎤 按此說話 (Tap & Say "呢個係...")';
-            button.style.backgroundColor = '#E65100';
+    <!DOCTYPE html>
+    <html><head><meta charset="utf-8"><style>
+    .mic-btn {{ width: 100%; height: 85px; font-size: 24px; font-weight: bold; background-color: #E65100; color: white; border: none; border-radius: 18px; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,.15); }}
+    .mic-btn:active {{ background-color: #BF360C; }}
+    .status-text {{ font-size: 20px; font-family: sans-serif; color: #333; text-align: center; margin-top: 10px; }}
+    </style></head><body>
+    <button class="mic-btn" id="start-btn" onclick="startRecognition()">🎤 按此說話 (Tap & Say "呢個係...")</button>
+    <div class="status-text" id="status">點擊上方按鈕並講出名稱</div>
+    <script>
+    var recognition = null;
+    var recognizing = false;
+    var navigatingWithResult = false;
+    var button = document.getElementById('start-btn');
+    var status = document.getElementById('status');
+
+    function readyToListen(message) {{
+        recognizing = false;
+        button.disabled = false;
+        button.style.pointerEvents = 'auto';
+        button.style.backgroundColor = '#E65100';
+        button.innerHTML = '🎤 按此說話 (Tap & Say "呢個係...")';
+        status.innerHTML = message || '點擊上方按鈕並講出名稱';
+    }}
+
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {{
+        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.lang = 'zh-HK';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = function() {{
+            recognizing = true;
             button.disabled = false;
+            button.style.pointerEvents = 'auto';
+            button.innerHTML = '🔴 聆聽中... (Tap to stop)';
+            button.style.backgroundColor = '#D32F2F';
+            status.innerHTML = '🔴 正在聆聽中，請講話... (Listening...)';
+        }};
+
+        recognition.onresult = function(event) {{
+            var transcript = event.results[0][0].transcript;
+            navigatingWithResult = true;
+            recognizing = false;
+            status.innerHTML = '✅ 聽到: <b>' + transcript + '</b>';
+            button.style.backgroundColor = '#388E3C';
+            var parentUrl = new URL(window.parent.location.href);
+            parentUrl.searchParams.delete('speech_result');
+            parentUrl.searchParams.set('speech_result', transcript);
+            window.parent.location.assign(parentUrl.toString());
+        }};
+
+        recognition.onerror = function(event) {{
+            recognizing = false;
+            readyToListen('⚠️ 未能識別 (' + event.error + ') — 請再試一次');
+        }};
+
+        recognition.onend = function() {{
+            // onend fires when the microphone has stopped. Always unlock the
+            // button unless a successful result is already navigating the app.
+            if (!navigatingWithResult) readyToListen();
+        }};
+    }} else {{
+        status.innerHTML = '❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)';
+        button.disabled = true;
+    }}
+
+    function startRecognition() {{
+        if (!recognition) return;
+        if (recognizing) {{
+            recognition.stop();
+            return;
         }}
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {{
-            var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.lang = 'zh-HK';
-            recognition.continuous = false;
-            recognition.interimResults = false;
-            recognition.onstart = function() {{
-                status.innerHTML = '🔴 正在聆聽中，請講話... (Listening...)';
-                button.innerHTML = '🔴 聆聽中...';
-                button.style.backgroundColor = '#D32F2F';
-                button.disabled = true;
-            }};
-            recognition.onresult = function(event) {{
-                var transcript = event.results[0][0].transcript;
-                status.innerHTML = '✅ 聽到: <b>' + transcript + '</b>';
-                button.style.backgroundColor = '#388E3C';
-                var parentUrl = new URL(window.parent.location.href);
-                parentUrl.searchParams.delete('speech_result');
-                parentUrl.searchParams.set('speech_result', transcript);
-                window.parent.location.assign(parentUrl.toString());
-            }};
-            recognition.onerror = function(event) {{
-                status.innerHTML = '⚠️ 未能識別 (' + event.error + ')';
-                // Recognition has stopped after an error: return to ready state.
-                setTimeout(readyToListen, 1200);
-            }};
-            recognition.onend = function() {{
-                // onend also fires after no-speech, aborted, and other failures.
-                // Never leave the UI showing Listening when the mic is off.
-                if (status.innerHTML.indexOf('聽到:') === -1) {{
-                    readyToListen();
-                }}
-            }};
-        }} else {{
-            status.innerHTML = '❌ 瀏覽器不支援語音功能 (請使用 Chrome 或 Safari)';
-            button.disabled = true;
+        navigatingWithResult = false;
+        readyToListen();
+        try {{
+            recognition.start();
+        }} catch (error) {{
+            readyToListen('⚠️ 麥克風未能啟動 — 請再試一次');
         }}
-        function startRecognition() {{
-            if (!recognition) return;
-            try {{ recognition.start(); }} catch (e) {{ readyToListen(); }}
-        }}
-        </script></body></html>
+    }}
+    </script></body></html>
     """, height=150)
 
     st.markdown("---")
-    manual_input = st.text_input(
-        "識別結果 / 手動輸入 (Recognized Text / Manual Input):",
-        key=current_key,
-        placeholder="語音結果會顯示在這裡；也可以手動輸入"
-    )
+    manual_input = st.text_input("識別結果 / 手動輸入 (Recognized Text / Manual Input):", key=current_key, placeholder="語音結果會顯示在這裡；也可以手動輸入")
     col1, col2 = st.columns(2)
     with col1:
         if st.button("👉 提交答案 / 下一題 (Submit / Next)", key=f"btn_next_{st.session_state.current_item_index}"):
