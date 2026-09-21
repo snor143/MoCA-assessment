@@ -122,20 +122,11 @@ if st.session_state.stage == "intro":
         st.session_state.moca_naming_score = 0
         st.session_state.last_transcript = ""
         st.session_state.item_start_time = time.time()
-        st.query_params.clear()
         st.rerun()
 
 # STAGE 2: GAMEPLAY
 elif st.session_state.stage == "gameplay":
     index = st.session_state.current_item_index
-
-    # Check if speech transcript was just sent from JS
-    speech_sync = st.query_params.get("speech_sync")
-    if speech_sync:
-        st.session_state.last_transcript = str(speech_sync)
-        del st.query_params["speech_sync"]
-        st.rerun()
-
     item = ITEMS[index]
 
     st.markdown(
@@ -155,9 +146,12 @@ elif st.session_state.stage == "gameplay":
         unsafe_allow_html=True,
     )
 
-    # Isolated iframe speech input
-    component_container = st.empty()
-    with component_container.container():
+    initial = html.escape(st.session_state.last_transcript, quote=True)
+    displayed = html.escape(st.session_state.last_transcript or "尚未有語音結果")
+
+    # Native Streamlit Form to guarantee state progression without URL loops
+    with st.form(key=f"item_form_{index}"):
+        # Voice Recognition Component
         components.html(
             f"""
         <!doctype html><html><head><meta charset="utf-8"><style>
@@ -172,15 +166,6 @@ elif st.session_state.stage == "gameplay":
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         const mic = document.getElementById('mic'), status = document.getElementById('status');
         let recognition = null, listening = false;
-
-        function sendToStreamlit(text) {{
-          const search = '?speech_sync=' + encodeURIComponent(text);
-          try {{ window.top.location.search = search; }}
-          catch(e1) {{
-            try {{ window.parent.location.search = search; }}
-            catch(e2) {{ window.location.search = search; }}
-          }}
-        }}
 
         if(SR) {{
           recognition = new SR();
@@ -201,8 +186,12 @@ elif st.session_state.stage == "gameplay":
             mic.style.background = '#2E7D32';
             mic.textContent = '🎤 重新錄音';
             
-            // Pass transcribed text directly to Python via URL param sync
-            sendToStreamlit(text);
+            // Pass transcribed text up to Python parent text input field
+            const textAreas = window.parent.document.querySelectorAll('textarea');
+            if(textAreas.length > 0) {{
+                textAreas[0].value = text;
+                textAreas[0].dispatchEvent(new Event('input', {{ bubbles: true }}));
+            }}
           }};
 
           recognition.onerror = (event) => {{
@@ -225,13 +214,11 @@ elif st.session_state.stage == "gameplay":
         }};
         </script></body></html>
         """,
-            height=110,
+            height=120,
         )
 
-    # Form with text input backed directly by st.session_state
-    with st.form(key=f"item_form_{index}"):
-        user_answer = st.text_input(
-            "語音結果／手動修改答案：",
+        user_answer = st.text_area(
+            "答案（可修改或手動輸入）：",
             value=st.session_state.last_transcript,
             key=f"user_input_{index}",
         )
@@ -243,8 +230,7 @@ elif st.session_state.stage == "gameplay":
             skip_btn = st.form_submit_button("⏭️ 跳過")
 
         if submit_btn:
-            actual_text = user_answer.strip() if user_answer.strip() else st.session_state.last_transcript
-            correct = evaluate_answer(actual_text if actual_text else "未有說話")
+            correct = evaluate_answer(user_answer if user_answer else "未有說話")
             if correct:
                 st.success("✅ 正確！ (Correct!)", icon="✅")
                 time.sleep(0.8)
@@ -270,7 +256,6 @@ elif st.session_state.stage == "complete":
         st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
         st.session_state.last_transcript = ""
-        st.query_params.clear()
         st.rerun()
 
     with st.expander(
@@ -300,4 +285,3 @@ elif st.session_state.stage == "complete":
                 f"moca_cantonese_speech_telemetry_{int(time.time())}.csv",
                 "text/csv",
             )
-            
