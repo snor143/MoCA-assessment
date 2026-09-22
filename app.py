@@ -48,11 +48,11 @@ for key, value in {
 
 # GAME DATA 1: MEMORY ITEMS (HK MARKET EQUIVALENTS)
 MEMORY_ITEMS = [
-    {"id": "mem_1", "name": "菜心", "category": "一種蔬菜", "options": ["菜心", "芥蘭", "白菜"]},
-    {"id": "mem_2", "name": "石斑", "category": "一種海鮮/魚類", "options": ["石斑", "鯇魚", "三文魚"]},
-    {"id": "mem_3", "name": "豆腐", "category": "一種豆製品", "options": ["豆腐", "腐竹", "豆漿"]},
-    {"id": "mem_4", "name": "蘋果", "category": "一種水果", "options": ["蘋果", "香蕉", "草莓"]},
-    {"id": "mem_5", "name": "雞蛋", "category": "一種蛋類", "options": ["雞蛋", "鴨蛋", "豬肉"]},
+    {"id": "mem_1", "name": "雪櫃", "category": "一種電器", "options": ["雪櫃", "風扇", "電視"]},
+    {"id": "mem_2", "name": "郵局", "category": "一種建築物", "options": ["消防局", "郵局", "醫院"]},
+    {"id": "mem_3", "name": "榕樹", "category": "一種植物", "options": ["橡樹", "榕樹", "松樹"]},
+    {"id": "mem_4", "name": "塑膠", "category": "一種物料", "options": ["紙張", "金屬", "塑膠"]},
+    {"id": "mem_5", "name": "藍色", "category": "一種顏色", "options": ["藍色", "紅色", "綠色"]},
 ]
 
 # GAME DATA 2: NAMING ITEMS (DISTRACTOR TASK)
@@ -95,8 +95,8 @@ def render_audio_speaker_component(words_list, key_suffix):
     button:hover {{ background:#0D47A1; }}
     .status {{ font-size:16px; margin-top:8px; font-weight:bold; color:#1976D2; }}
     </style></head><body>
-    <button id="speak_btn_{key_suffix}" type="button">▶️ 準備好，按此開始播放語音 (Start Speech)</button>
-    <div class="status" id="status_{key_suffix}">請準備好，然後點擊上方按鈕收聽</div>
+    <button id="speak_btn_{key_suffix}" type="button">▶️ 按此開始播放語音 (Start Speech)</button>
+    <div class="status" id="status_{key_suffix}">準備好，然後點擊上方按鈕收聽</div>
 
     <script>
     const words = {words_js_array};
@@ -129,9 +129,6 @@ def render_audio_speaker_component(words_list, key_suffix):
           return;
         }}
 
-        const word = words[index];
-        status.textContent = '🔊 正在播放第 ' + (index + 1) + ' 個詞語: ' + word;
-        
         const utterance = new SpeechSynthesisUtterance(word);
         utterance.lang = 'zh-HK';
         utterance.rate = 0.85; // Natural Cantonese pace
@@ -227,7 +224,7 @@ def render_mic_component(key_suffix):
 
       recognition.onresult = (event) => {{
         const text = event.results[0][0].transcript.trim();
-        status.textContent = '✅ 聽到: ' + text;
+        status.textContent = '🎧 聽到: ' + text;
         injectValueIntoStreamlitWidget(text);
       }};
 
@@ -293,10 +290,7 @@ if st.session_state.stage == "intro":
         """
     <div class="instruction-card">
         <h2>今天我們要去街市買菜！</h2>
-        <p style="font-size:20px;">測試流程：</p>
-        <p style="font-size:18px;">1. <b>聽講詞語 (學習)</b>：準備好後按鈕收聽 5 個買菜詞語並重複</p>
-        <p style="font-size:18px;">2. <b>動物命名 (干擾任務)</b>：大聲講出動物名稱</p>
-        <p style="font-size:18px;">3. <b>延遲回憶 (記憶測試)</b>：講出剛才記住的買菜詞語</p>
+        <p style="font-size:20px;">馬上開始吧：</p>
     </div>
     """,
         unsafe_allow_html=True,
@@ -312,12 +306,12 @@ if st.session_state.stage == "intro":
 
 # --- STAGE 2: MEMORY REGISTRATION TRIAL 1 ---
 elif st.session_state.stage == "memory_reg_1":
-    st.title("🧠 買菜記性測試 (第一次學習)")
+    st.title("🧠 記憶力挑戰")
     st.markdown(
         """
     <div class="instruction-card">
-        <p style="font-size:22px;">請準備好，然後點擊下方藍色按鈕<b>聽語音</b>讀出 <b>5 個詞語</b>：</p>
-        <p style="font-size:18px;color:#D32F2F;">⚠️ 提示：讀完後請盡量講出你記得的詞語（次序並不重要）。<b>此階段不計分</b>。</p>
+        <p style="font-size:22px;">這是一個記憶力遊戲，你將會聽到一些詞語,請你把它們</b>聽清楚及記住</b>：</p>
+        <p style="font-size:18px;color:#D32F2F;">⚠️ 提示：當這些詞語播放完畢時,盡量說出你能夠記得的，</b>次序並不重要。</b></p>
     </div>
     """,
         unsafe_allow_html=True,
@@ -331,7 +325,7 @@ elif st.session_state.stage == "memory_reg_1":
 
     with st.form(key="form_reg_1"):
         user_answer = st.text_input("請講出剛才聽到的詞語（可以用點擊語音輸入）：", key="input_reg_1")
-        if st.form_submit_button("👉 完成第一次嘗試 (Next Trial)"):
+        if st.form_submit_button("👉 完成 (Finish)"):
             spoken = [w.strip() for w in user_answer.replace("，", ",").split(",") if w.strip()]
             st.session_state.reg_trial_1_items = spoken
             st.session_state.stage = "memory_reg_2"
@@ -339,11 +333,11 @@ elif st.session_state.stage == "memory_reg_1":
 
 # --- STAGE 3: MEMORY REGISTRATION TRIAL 2 ---
 elif st.session_state.stage == "memory_reg_2":
-    st.title("🧠 買菜記性測試 (第二次學習)")
+    st.title("🧠 記憶力挑戰2")
     st.markdown(
         """
     <div class="instruction-card">
-        <p style="font-size:22px;">我會重複讀第二次這 5 個詞語。請點擊藍色按鈕收聽並再次嘗試把它們記住。</p>
+        <p style="font-size:22px;">之前那些詞語會重複播放第二次。請嘗試把它們記住並講出來,越多越好,包括之前你提及的那些。</p>
     </div>
     """,
         unsafe_allow_html=True,
@@ -369,16 +363,16 @@ elif st.session_state.stage == "memory_reg_notice":
     st.markdown(
         """
     <div class="notice-card">
-        <h1 style="color:#D84315; font-size:36px; margin-bottom:15px;">請牢記這 5 個買菜詞語！</h1>
+        <h1 style="color:#D84315; font-size:36px; margin-bottom:15px;">請緊記這 5 個詞語！</h1>
         <p style="font-size:24px; color:#424242; line-height:1.6;">
-            <b>在完成下一個小遊戲後，我們會要求你再次講出這 5 個詞語！</b>
+            <b>在整個測試完結時會再問你那些詞語</b>
         </p>
     </div>
     """,
         unsafe_allow_html=True,
     )
 
-    if st.button("👉 我明白了，開始動物遊戲 (Proceed to Animal Game)"):
+    if st.button("👉 我明白了"):
         st.session_state.stage = "naming"
         st.session_state.current_item_index = 0
         st.session_state.item_start_time = time.time()
