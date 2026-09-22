@@ -1,3 +1,4 @@
+# Environment setup
 import html
 import time
 from datetime import datetime
@@ -6,6 +7,7 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
+# Name of page
 st.set_page_config(
     page_title="HK Supermarket Explorer - Voice Naming",
     page_icon="🛒",
@@ -13,6 +15,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# Custom UI
 st.markdown(
     """
 <style>
@@ -25,7 +28,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Initialize Session State
+# Initialize state
 for key, value in {
     "stage": "intro",
     "current_item_index": 0,
@@ -37,6 +40,7 @@ for key, value in {
     if key not in st.session_state:
         st.session_state[key] = value
 
+# Initialize questions
 ITEMS = [
     {
         "id": "item_1",
@@ -64,7 +68,7 @@ ITEMS = [
     },
 ]
 
-
+# Function check if input answer = actual answer
 def evaluate_answer(answer):
     item = ITEMS[st.session_state.current_item_index]
     elapsed = (
@@ -78,7 +82,6 @@ def evaluate_answer(answer):
         .replace("呢個係", "")
         .replace("這是", "")
         .replace("呢隻係", "")
-        .replace("嗰位是", "")
     )
     correct = any(s in answer or s in clean for s in item["acceptable_synonyms"])
     if correct:
@@ -93,7 +96,7 @@ def evaluate_answer(answer):
     })
     return correct
 
-
+# Function to check any questions left, reset latency timer
 def advance_item():
     if st.session_state.current_item_index + 1 < len(ITEMS):
         st.session_state.current_item_index += 1
@@ -105,17 +108,17 @@ def advance_item():
 
 # STAGE 1: INTRO
 if st.session_state.stage == "intro":
-    st.title("🛒 香港街市語音買菜 (HK Market Voice Explorer)")
+    st.title("🛒 探索香港街市 (Explore HK Market)")
     st.markdown(
         """
     <div class="instruction-card">
-        <h2>婆婆/伯伯，今日我們要去街市買菜！</h2>
-        <p style="font-size:22px;">請睇睇螢幕上的動物，<b>用廣東話講出它的名字</b>。</p>
+        <h2>今日我們要去街市！</h2>
+        <p style="font-size:22px;">請看看螢幕上的動物，<b>用廣東話講出它的名字</b>。</p>
     </div>
     """,
         unsafe_allow_html=True,
     )
-    if st.button("開始買菜 (Start Voice Assessment)"):
+    if st.button("開始 (Start)"):
         st.session_state.stage = "gameplay"
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
@@ -130,15 +133,11 @@ elif st.session_state.stage == "gameplay":
     item = ITEMS[index]
 
     st.markdown(
-        f"<p style='font-size:22px;text-align:center;color:#666;'>進度: {index+1} / {len(ITEMS)}</p>",
+        f"<p style='font-size:22px;text-align:center;color:#666;'>題目: {index+1} / {len(ITEMS)}</p>",
         unsafe_allow_html=True,
     )
     st.markdown(
         "<h2 style='text-align:center;'>請大聲講出，這是什麼動物？</h2>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        "<p style='text-align:center;font-size:18px;color:#2E7D32;'>💡 提示：可以說<b>「呢個係...」</b>（例如：「呢個係蝴蝶」）</p>",
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -157,6 +156,7 @@ elif st.session_state.stage == "gameplay":
     <button id="mic" type="button">🎤 按此說話 (Tap & Say)</button>
     <div class="status" id="status">點擊上方按鈕並講出名稱</div>
 
+    // Enable chrome mic
     <script>
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const mic = document.getElementById('mic'), status = document.getElementById('status');
@@ -203,7 +203,7 @@ elif st.session_state.stage == "gameplay":
 
       recognition.onresult = (event) => {{
         const text = event.results[0][0].transcript.trim();
-        status.textContent = '✅ 聽到: ' + text;
+        status.textContent = '🎧 聽到: ' + text;
         mic.style.background = '#2E7D32';
         mic.textContent = '🎤 重新錄音';
         
