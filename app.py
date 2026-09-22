@@ -178,7 +178,7 @@ def render_audio_speaker_component(words_list, key_suffix):
 
 
 def render_mic_component(key_suffix, continuous_mode=False):
-    """Web Speech API Mic component supporting both single-phrase and continuous mode."""
+    """Web Speech API Mic component supporting continuous mode, manual edits, and multi-session appending."""
     is_continuous_js = "true" if continuous_mode else "false"
     components.html(
         f"""
@@ -195,13 +195,19 @@ def render_mic_component(key_suffix, continuous_mode=False):
     const mic = document.getElementById('mic_{key_suffix}'), status = document.getElementById('status_{key_suffix}');
     const isContinuous = {is_continuous_js};
     let recognition = null, listening = false;
-    let accumulatedTranscript = "";
+    let baseText = "";
 
     function resetToStandby() {{
       listening = false;
       mic.style.background = '#2E7D32';
       mic.textContent = '🎤 開啟麥克風 Speak';
       status.textContent = '🟢 點擊上方按鈕開始語音輸入';
+    }}
+
+    function getCurrentInputText() {{
+      const doc = window.parent.document;
+      const inputs = doc.querySelectorAll('input[type="text"], textarea');
+      return inputs.length > 0 ? inputs[0].value.trim() : "";
     }}
 
     function injectValueIntoStreamlitWidget(text) {{
@@ -251,16 +257,17 @@ def render_mic_component(key_suffix, continuous_mode=False):
           }}
 
           if (finalTranscript) {{
-            accumulatedTranscript += (accumulatedTranscript ? ' ' : '') + finalTranscript.trim();
+            baseText += (baseText ? ' ' : '') + finalTranscript.trim();
           }}
 
-          const displayText = accumulatedTranscript + (interimTranscript ? ' ' + interimTranscript : '');
+          const displayText = baseText + (interimTranscript ? (baseText ? ' ' : '') + interimTranscript : '');
           status.textContent = '🎧 正在記錄: ' + displayText;
           injectValueIntoStreamlitWidget(displayText);
         }} else {{
           const text = event.results[0][0].transcript.trim();
+          const combined = baseText ? (baseText + ' ' + text) : text;
           status.textContent = '🎧 聽到: ' + text;
-          injectValueIntoStreamlitWidget(text);
+          injectValueIntoStreamlitWidget(combined);
         }}
       }};
 
@@ -271,7 +278,6 @@ def render_mic_component(key_suffix, continuous_mode=False):
       }};
 
       recognition.onend = () => {{
-        // Auto-restart if continuous mode and user hasn't explicitly stopped it
         if (listening && isContinuous) {{
           try {{ recognition.start(); }} catch(e) {{ resetToStandby(); }}
         }} else {{
@@ -291,7 +297,8 @@ def render_mic_component(key_suffix, continuous_mode=False):
         resetToStandby(); 
         return; 
       }}
-      accumulatedTranscript = "";
+      // Read current text box content (preserving manual edits/deletions) before starting
+      baseText = getCurrentInputText();
       try {{ recognition.start(); }} catch(e) {{}}
     }};
     </script></body></html>
@@ -336,8 +343,8 @@ if st.session_state.stage == "intro":
     st.markdown(
         """
     <div class="instruction-card">
-        <h2>今天我們要去街市買菜！</h2>
-        <p style="font-size:20px;">馬上開始吧</p>
+        <h2>今天我們去超市吧！</h2>
+        <p style="font-size:20px;">馬上開始</p>
     </div>
     """,
         unsafe_allow_html=True,
