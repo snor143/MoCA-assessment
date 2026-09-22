@@ -104,7 +104,6 @@ def render_audio_speaker_component(words_list, key_suffix):
     const status = document.getElementById('status_{key_suffix}');
     let isPlaying = false;
 
-    // Pre-load voices for browsers requiring dynamic async fetching
     if ('speechSynthesis' in window) {{
       window.speechSynthesis.onvoiceschanged = () => {{
         window.speechSynthesis.getVoices();
@@ -117,9 +116,9 @@ def render_audio_speaker_component(words_list, key_suffix):
         return;
       }}
       
-      if (isPlaying) return; // Prevent double trigger
+      if (isPlaying) return;
       
-      window.speechSynthesis.cancel(); // Clear any existing audio queue
+      window.speechSynthesis.cancel();
       isPlaying = true;
       btn.disabled = true;
       btn.style.background = '#757575';
@@ -137,12 +136,10 @@ def render_audio_speaker_component(words_list, key_suffix):
           return;
         }}
 
-        // Fixed reference error (words[index] instead of word)
         const utterance = new SpeechSynthesisUtterance(words[index]);
         utterance.lang = 'zh-HK';
-        utterance.rate = 0.85; // Natural Cantonese pace
+        utterance.rate = 0.85;
 
-        // Attempt to match Cantonese voice if available in system
         const voices = window.speechSynthesis.getVoices();
         const hkVoice = voices.find(v => v.lang === 'zh-HK' || v.lang === 'yue-Hant-HK' || v.lang.includes('HK'));
         if (hkVoice) {{
@@ -152,7 +149,6 @@ def render_audio_speaker_component(words_list, key_suffix):
         utterance.onend = () => {{
           index++;
           if (index < words.length) {{
-            // 1 second delay between words
             setTimeout(speakNext, 1000);
           }} else {{
             status.textContent = '✅ 播放完畢，請講出你記得的詞語';
@@ -181,8 +177,9 @@ def render_audio_speaker_component(words_list, key_suffix):
     )
 
 
-def render_mic_component(key_suffix):
-    """Reusable Web Speech API Mic component for voice input."""
+def render_mic_component(key_suffix, continuous_mode=False):
+    """Web Speech API Mic component supporting both single-phrase and continuous mode."""
+    is_continuous_js = "true" if continuous_mode else "false"
     components.html(
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
@@ -190,19 +187,21 @@ def render_mic_component(key_suffix):
     button {{ width:100%; height:55px; font-size:18px; font-weight:bold; color:white; background:#2E7D32; border:0; border-radius:12px; cursor:pointer; transition: background 0.3s; }}
     .status {{ font-size:16px; text-align:center; margin:6px 0; min-height:22px; }}
     </style></head><body>
-    <button id="mic_{key_suffix}" type="button">🎤 按此說話 (Tap & Say)</button>
-    <div class="status" id="status_{key_suffix}">點擊上方按鈕並講出名稱</div>
+    <button id="mic_{key_suffix}" type="button">🎤 開啟麥克風 Speak</button>
+    <div class="status" id="status_{key_suffix}">點擊上方按鈕開始語音輸入</div>
 
     <script>
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const mic = document.getElementById('mic_{key_suffix}'), status = document.getElementById('status_{key_suffix}');
+    const isContinuous = {is_continuous_js};
     let recognition = null, listening = false;
+    let accumulatedTranscript = "";
 
     function resetToStandby() {{
       listening = false;
       mic.style.background = '#2E7D32';
-      mic.textContent = '🎤 按此說話 (Tap & Say)';
-      status.textContent = '🟢 點擊上方按鈕並講出名稱';
+      mic.textContent = '🎤 開啟麥克風 Speak';
+      status.textContent = '🟢 點擊上方按鈕開始語音輸入';
     }}
 
     function injectValueIntoStreamlitWidget(text) {{
@@ -228,29 +227,56 @@ def render_mic_component(key_suffix):
     if(SR) {{
       recognition = new SR();
       recognition.lang = 'zh-HK';
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.continuous = isContinuous;
+      recognition.interimResults = isContinuous;
 
       recognition.onstart = () => {{
         listening = true;
         mic.style.background = '#D32F2F';
-        mic.textContent = '⏹️ 正在聆聽中...';
-        status.textContent = '🔴 正在聆聽中，請講話...';
+        mic.textContent = '⏹️ 停止麥克風 (麥克風持續開啟中)';
+        status.textContent = isContinuous ? '🔴 麥克風開啟中，可以邊想邊講...' : '🔴 正在聆聽中，請講話...';
       }};
 
       recognition.onresult = (event) => {{
-        const text = event.results[0][0].transcript.trim();
-        status.textContent = '🎧 聽到: ' + text;
-        injectValueIntoStreamlitWidget(text);
+        if (isContinuous) {{
+          let interimTranscript = '';
+          let finalTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {{
+            if (event.results[i].isFinal) {{
+              finalTranscript += event.results[i][0].transcript;
+            }} else {{
+              interimTranscript += event.results[i][0].transcript;
+            }}
+          }}
+
+          if (finalTranscript) {{
+            accumulatedTranscript += (accumulatedTranscript ? ' ' : '') + finalTranscript.trim();
+          }}
+
+          const displayText = accumulatedTranscript + (interimTranscript ? ' ' + interimTranscript : '');
+          status.textContent = '🎧 正在記錄: ' + displayText;
+          injectValueIntoStreamlitWidget(displayText);
+        }} else {{
+          const text = event.results[0][0].transcript.trim();
+          status.textContent = '🎧 聽到: ' + text;
+          injectValueIntoStreamlitWidget(text);
+        }}
       }};
 
       recognition.onerror = (event) => {{
-        resetToStandby();
-        status.textContent = '⚠️ 未能識別，請再試一次';
+        if (event.error !== 'no-speech') {{
+          status.textContent = '⚠️ 語音識別問題 (' + event.error + ')，請再試一次';
+        }}
       }};
 
       recognition.onend = () => {{
-        if (listening) {{ resetToStandby(); }}
+        // Auto-restart if continuous mode and user hasn't explicitly stopped it
+        if (listening && isContinuous) {{
+          try {{ recognition.start(); }} catch(e) {{ resetToStandby(); }}
+        }} else {{
+          resetToStandby();
+        }}
       }};
     }} else {{
       mic.disabled = true;
@@ -259,7 +285,13 @@ def render_mic_component(key_suffix):
 
     mic.onclick = () => {{
       if(!recognition) return;
-      if(listening) {{ recognition.stop(); resetToStandby(); return; }}
+      if(listening) {{ 
+        listening = false; 
+        recognition.stop(); 
+        resetToStandby(); 
+        return; 
+      }}
+      accumulatedTranscript = "";
       try {{ recognition.start(); }} catch(e) {{}}
     }};
     </script></body></html>
@@ -294,7 +326,6 @@ def advance_naming_item():
         st.session_state.current_item_index += 1
         st.session_state.item_start_time = time.time()
     else:
-        # Move directly into Delayed Memory Recall
         st.session_state.stage = "delayed_recall_free"
         st.session_state.item_start_time = time.time()
 
@@ -333,16 +364,16 @@ elif st.session_state.stage == "memory_reg_1":
         unsafe_allow_html=True,
     )
 
-    # Manual Start Audio Button Component
     word_names = [item["name"] for item in MEMORY_ITEMS]
     render_audio_speaker_component(word_names, "reg_1")
 
-    render_mic_component("reg_1")
+    # Continuous listening enabled for thought process
+    render_mic_component("reg_1", continuous_mode=True)
 
     with st.form(key="form_reg_1"):
-        user_answer = st.text_input("請講出剛才聽到的詞語（可以用點擊語音輸入）：", key="input_reg_1")
+        user_answer = st.text_input("請講出剛才聽到的詞語（語音識別會自動持續記錄）：", key="input_reg_1")
         if st.form_submit_button("👉 完成 (Finish)"):
-            spoken = [w.strip() for w in user_answer.replace("，", ",").split(",") if w.strip()]
+            spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
             st.session_state.reg_trial_1_items = spoken
             st.session_state.stage = "memory_reg_2"
             st.rerun()
@@ -362,14 +393,14 @@ elif st.session_state.stage == "memory_reg_2":
     word_names = [item["name"] for item in MEMORY_ITEMS]
     render_audio_speaker_component(word_names, "reg_2")
 
-    render_mic_component("reg_2")
+    # Continuous listening enabled for thought process
+    render_mic_component("reg_2", continuous_mode=True)
 
     with st.form(key="form_reg_2"):
-        user_answer = st.text_input("請再次講出記得的詞語：", key="input_reg_2")
+        user_answer = st.text_input("請再次講出記得的詞語（語音識別會自動持續記錄）：", key="input_reg_2")
         if st.form_submit_button("👉 繼續 (Next Step)"):
-            spoken = [w.strip() for w in user_answer.replace("，", ",").split(",") if w.strip()]
+            spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
             st.session_state.reg_trial_2_items = spoken
-            # Navigate to the explicit reminder/notice page
             st.session_state.stage = "memory_reg_notice"
             st.rerun()
 
@@ -403,7 +434,8 @@ elif st.session_state.stage == "naming":
     st.markdown("<h2 style='text-align:center;'>請大聲講出，這是什麼動物？</h2>", unsafe_allow_html=True)
     st.markdown(f"<div style='font-size:120px;text-align:center;margin:10px 0;'>{item['emoji']}</div>", unsafe_allow_html=True)
 
-    render_mic_component(f"naming_{index}")
+    # Standard single-shot speech recognition for naming
+    render_mic_component(f"naming_{index}", continuous_mode=False)
 
     with st.form(key=f"naming_form_{index}"):
         user_answer = st.text_input("答案（語音識別結果會自動填入）：", key=f"user_input_{index}")
@@ -436,10 +468,11 @@ elif st.session_state.stage == "delayed_recall_free":
         unsafe_allow_html=True,
     )
 
-    render_mic_component("delayed_free")
+    # Continuous listening enabled for delayed recall
+    render_mic_component("delayed_free", continuous_mode=True)
 
     with st.form(key="form_delayed_free"):
-        user_answer = st.text_input("講出記得的詞語：", key="input_delayed_free")
+        user_answer = st.text_input("講出記得的詞語（語音識別會自動持續記錄）：", key="input_delayed_free")
         if st.form_submit_button("👉 提交自由回憶答案"):
             elapsed = round(time.time() - st.session_state.item_start_time, 2)
             recalled = []
