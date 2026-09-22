@@ -112,7 +112,7 @@ if st.session_state.stage == "intro":
     st.markdown(
         """
     <div class="instruction-card">
-        <h2>今日我們要去街市！</h2>
+        <h2>今天我們要去街市！</h2>
         <p style="font-size:22px;">請看看螢幕上的動物，<b>用廣東話講出它的名字</b>。</p>
     </div>
     """,
@@ -257,9 +257,6 @@ elif st.session_state.stage == "gameplay":
 
         if submit_btn:
             correct = evaluate_answer(user_answer if user_answer.strip() else "未有說話")
-            if correct:
-                st.success("✅ 正確！ (Correct!)", icon="✅")
-                time.sleep(0.8)
             advance_item()
             st.rerun()
 
