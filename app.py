@@ -290,7 +290,7 @@ if st.session_state.stage == "intro":
         """
     <div class="instruction-card">
         <h2>今天我們要去街市買菜！</h2>
-        <p style="font-size:20px;">馬上開始吧：</p>
+        <p style="font-size:20px;">馬上開始吧</p>
     </div>
     """,
         unsafe_allow_html=True,
@@ -310,8 +310,8 @@ elif st.session_state.stage == "memory_reg_1":
     st.markdown(
         """
     <div class="instruction-card">
-        <p style="font-size:22px;">這是一個記憶力遊戲，你將會聽到一些詞語,請你把它們</b>聽清楚及記住</b>：</p>
-        <p style="font-size:18px;color:#D32F2F;">⚠️ 提示：當這些詞語播放完畢時,盡量說出你能夠記得的，</b>次序並不重要。</b></p>
+        <p style="font-size:22px;">這是一個記憶力遊戲，你將會聽到一些詞語，請你把它們<b>聽清楚及記住</b>：</p>
+        <p style="font-size:18px;color:#D32F2F;">⚠️ 提示：當這些詞語播放完畢時,盡量說出你能夠記得的，<b>次序並不重要。</b></p>
     </div>
     """,
         unsafe_allow_html=True,
@@ -337,7 +337,7 @@ elif st.session_state.stage == "memory_reg_2":
     st.markdown(
         """
     <div class="instruction-card">
-        <p style="font-size:22px;">之前那些詞語會重複播放第二次。請嘗試把它們記住並講出來,越多越好,包括之前你提及的那些。</p>
+        <p style="font-size:22px;">之前那些詞語會重複播放第二次。請嘗試把它們記住並講出來，越多越好，包括之前你提及的那些。</p>
     </div>
     """,
         unsafe_allow_html=True,
@@ -413,8 +413,8 @@ elif st.session_state.stage == "delayed_recall_free":
     st.markdown(
         """
     <div class="instruction-card">
-        <h2>最開始我讀了一些買菜詞語給你聽，叫你記住它們。</h2>
-        <p style="font-size:22px;"><b>現在請你講出你記得的那些買菜詞語。</b>（每個正確給1分，共5分）</p>
+        <h2>最開始播放了一些買菜詞語給你聽，請你記住它們。</h2>
+        <p style="font-size:22px;"><b>現在請你講出你記得的那些買菜詞語</b></p>
     </div>
     """,
         unsafe_allow_html=True,
