@@ -614,20 +614,11 @@ elif st.session_state.stage == "delayed_recall_cued_step":
         st.rerun()
 
     item = missed_list[curr_idx]
-    st.title("💡 延遲記憶測試 (提示回憶)")
-    st.markdown(
-        f"""
-    <div class="instruction-card">
-        <p style="font-size:22px; color:#D32F2F; margin-bottom: 8px;">⚠️ 臨床註釋：提示下答對不獲 MoCA 主分數，僅作檢索/編碼分析。</p>
-        <p style="font-size:24px;"><b>進度：針對未回想詞語 ({curr_idx + 1} / {len(missed_list)})</b></p>
-    </div>
-    """,
-        unsafe_allow_html=True,
-    )
+    st.title("💡 延遲記憶挑戰 (提示)")
 
     # SUB-STEP 1: Category Cue (Voice Input)
     if st.session_state.cued_sub_step == "category":
-        st.subheader(f"類目提示 1/2: 「其中一個是：{item['category']}」")
+        st.subheader(f"提示: 「{item['category']}」")
         render_mic_component(f"cue_cat_{item['id']}", continuous_mode=True)
 
         with st.form(key=f"form_cat_{item['id']}"):
@@ -647,7 +638,7 @@ elif st.session_state.stage == "delayed_recall_cued_step":
 
     # SUB-STEP 2: Multiple Choice (If Category Cue Failed)
     elif st.session_state.cued_sub_step == "choice":
-        st.subheader(f"選擇題提示 2/2: 關於「{item['category']}」")
+        st.subheader(f"提示: 關於「{item['category']}」")
 
         with st.form(key=f"form_choice_{item['id']}"):
             selected_option = st.radio(
