@@ -9,7 +9,7 @@ import streamlit.components.v1 as components
 
 # Name of page
 st.set_page_config(
-    page_title="HK Supermarket Explorer - Voice Naming",
+    page_title="探索香港街市 (Explore HK Market)",
     page_icon="🛒",
     layout="centered",
     initial_sidebar_state="collapsed",
@@ -165,7 +165,7 @@ elif st.session_state.stage == "gameplay":
       listening = false;
       mic.style.background = '#2E7D32';
       mic.textContent = '🎤 按此說話 (Tap & Say)';
-      status.textContent = '🟢 待機中，點擊上方按鈕並講出名稱';
+      status.textContent = '🟢 點擊上方按鈕並講出名稱';
     }}
 
     function injectValueIntoStreamlitWidget(text) {{
