@@ -23,6 +23,7 @@ st.markdown(
 .stButton>button:hover { background:#1B5E20; }
 .instruction-card { background:#F0F7F4; padding:20px; border-radius:16px; border-left:8px solid #2E7D32; margin-bottom:20px; }
 .audio-card { background:#E8F5E9; border-radius:12px; padding:20px; text-align:center; font-size:22px; font-weight:bold; color:#1B5E20; margin-bottom:15px; border:2px dashed #2E7D32; }
+.notice-card { background:#FFF8E1; border-radius:16px; padding:30px; border-left:8px solid #FFA000; text-align:center; margin-bottom:25px; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -30,7 +31,7 @@ st.markdown(
 
 # Initialize global session state
 for key, value in {
-    "stage": "intro",  # Flow: intro -> memory_reg_1 -> memory_reg_2 -> naming -> delayed_recall_free -> delayed_recall_cued -> complete
+    "stage": "intro",  # Flow: intro -> memory_reg_1 -> memory_reg_2 -> memory_reg_notice -> naming -> delayed_recall_free -> delayed_recall_cued -> complete
     "current_item_index": 0,
     "telemetry_logs": [],
     "item_start_time": None,
@@ -84,22 +85,24 @@ NAMING_ITEMS = [
 
 
 def render_audio_speaker_component(words_list, key_suffix):
-    """Component to automatically read Cantonese words sequentially with 1-second interval."""
+    """Cantonese Speech Synthesis component triggered ONLY when the user clicks 'Start'."""
     words_js_array = str(words_list)
     components.html(
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
     body {{ margin:0; font-family:sans-serif; text-align:center; }}
-    button {{ width:100%; height:50px; font-size:18px; font-weight:bold; color:white; background:#1976D2; border:0; border-radius:12px; cursor:pointer; }}
+    button {{ width:100%; height:55px; font-size:19px; font-weight:bold; color:white; background:#1976D2; border:0; border-radius:12px; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.1); transition: background 0.3s; }}
+    button:hover {{ background:#0D47A1; }}
     .status {{ font-size:16px; margin-top:8px; font-weight:bold; color:#1976D2; }}
     </style></head><body>
-    <button id="speak_btn_{key_suffix}" type="button">🔊 重新播放語音 (Replay Words)</button>
-    <div class="status" id="status_{key_suffix}">準備播放語音...</div>
+    <button id="speak_btn_{key_suffix}" type="button">▶️ 準備好，按此開始播放語音 (Start Speech)</button>
+    <div class="status" id="status_{key_suffix}">請準備好，然後點擊上方按鈕收聽</div>
 
     <script>
     const words = {words_js_array};
     const btn = document.getElementById('speak_btn_{key_suffix}');
     const status = document.getElementById('status_{key_suffix}');
+    let isPlaying = false;
 
     function speakWords() {{
       if (!('speechSynthesis' in window)) {{
@@ -107,29 +110,43 @@ def render_audio_speaker_component(words_list, key_suffix):
         return;
       }}
       
-      window.speechSynthesis.cancel(); // Stop any ongoing speech
+      if (isPlaying) return; // Prevent double trigger
+      
+      window.speechSynthesis.cancel(); // Clear any existing audio queue
+      isPlaying = true;
+      btn.disabled = true;
+      btn.style.background = '#757575';
+      
       let index = 0;
 
       function speakNext() {{
         if (index >= words.length) {{
           status.textContent = '✅ 播放完畢，請講出你記得的詞語';
+          isPlaying = false;
+          btn.disabled = false;
+          btn.style.background = '#1976D2';
+          btn.textContent = '🔄 重播語音 (Replay Words)';
           return;
         }}
 
         const word = words[index];
-        status.textContent = '🔊 正在播放 (' + (index + 1) + '/5)...';
+        status.textContent = '🔊 正在播放第 ' + (index + 1) + ' 個詞語: ' + word;
         
         const utterance = new SpeechSynthesisUtterance(word);
         utterance.lang = 'zh-HK';
-        utterance.rate = 0.85; // Natural speaking rate
+        utterance.rate = 0.85; // Natural Cantonese pace
 
         utterance.onend = () => {{
           index++;
           if (index < words.length) {{
-            // 1 second (1000ms) delay between words
+            // Exactly 1 second delay between words
             setTimeout(speakNext, 1000);
           }} else {{
             status.textContent = '✅ 播放完畢，請講出你記得的詞語';
+            isPlaying = false;
+            btn.disabled = false;
+            btn.style.background = '#1976D2';
+            btn.textContent = '🔄 重播語音 (Replay Words)';
           }}
         }};
 
@@ -144,13 +161,10 @@ def render_audio_speaker_component(words_list, key_suffix):
       speakNext();
     }}
 
-    // Auto play on render
-    setTimeout(speakWords, 500);
-
     btn.onclick = speakWords;
     </script></body></html>
     """,
-        height=90,
+        height=95,
     )
 
 
@@ -280,7 +294,7 @@ if st.session_state.stage == "intro":
     <div class="instruction-card">
         <h2>今天我們要去街市買菜！</h2>
         <p style="font-size:20px;">測試流程：</p>
-        <p style="font-size:18px;">1. <b>聽講詞語 (學習)</b>：請聽語音讀出5個買菜詞語並重複</p>
+        <p style="font-size:18px;">1. <b>聽講詞語 (學習)</b>：準備好後按鈕收聽 5 個買菜詞語並重複</p>
         <p style="font-size:18px;">2. <b>動物命名 (干擾任務)</b>：大聲講出動物名稱</p>
         <p style="font-size:18px;">3. <b>延遲回憶 (記憶測試)</b>：講出剛才記住的買菜詞語</p>
     </div>
@@ -296,22 +310,20 @@ if st.session_state.stage == "intro":
         st.session_state.item_start_time = time.time()
         st.rerun()
 
-# --- STAGE 2: MEMORY REGISTRATION TRIAL 1 (AUDIO ONLY) ---
+# --- STAGE 2: MEMORY REGISTRATION TRIAL 1 ---
 elif st.session_state.stage == "memory_reg_1":
     st.title("🧠 買菜記性測試 (第一次學習)")
     st.markdown(
         """
     <div class="instruction-card">
-        <p style="font-size:22px;">請仔細<b>聽語音</b>讀出以下 <b>5 個詞語</b>：</p>
+        <p style="font-size:22px;">請準備好，然後點擊下方藍色按鈕<b>聽語音</b>讀出 <b>5 個詞語</b>：</p>
         <p style="font-size:18px;color:#D32F2F;">⚠️ 提示：讀完後請盡量講出你記得的詞語（次序並不重要）。<b>此階段不計分</b>。</p>
     </div>
     """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("<div class='audio-card'>🔊 請戴上耳機或打開喇叭收聽詞語</div>", unsafe_allow_html=True)
-
-    # Audio player reading words sequentially with 1 sec delay
+    # Manual Start Audio Button Component
     word_names = [item["name"] for item in MEMORY_ITEMS]
     render_audio_speaker_component(word_names, "reg_1")
 
@@ -325,20 +337,17 @@ elif st.session_state.stage == "memory_reg_1":
             st.session_state.stage = "memory_reg_2"
             st.rerun()
 
-# --- STAGE 3: MEMORY REGISTRATION TRIAL 2 (AUDIO ONLY) ---
+# --- STAGE 3: MEMORY REGISTRATION TRIAL 2 ---
 elif st.session_state.stage == "memory_reg_2":
     st.title("🧠 買菜記性測試 (第二次學習)")
     st.markdown(
         """
     <div class="instruction-card">
-        <p style="font-size:22px;">我會重複讀第二次這 5 個詞語。請嘗試把它們記住並說給我聽。</p>
-        <p style="font-size:20px;color:#2E7D32;">💡 提示：<b>稍後完成其他任務後，我會再問你這些詞語！</b></p>
+        <p style="font-size:22px;">我會重複讀第二次這 5 個詞語。請點擊藍色按鈕收聽並再次嘗試把它們記住。</p>
     </div>
     """,
         unsafe_allow_html=True,
     )
-
-    st.markdown("<div class='audio-card'>🔊 請戴上耳機或打開喇叭收聽詞語</div>", unsafe_allow_html=True)
 
     word_names = [item["name"] for item in MEMORY_ITEMS]
     render_audio_speaker_component(word_names, "reg_2")
@@ -347,15 +356,35 @@ elif st.session_state.stage == "memory_reg_2":
 
     with st.form(key="form_reg_2"):
         user_answer = st.text_input("請再次講出記得的詞語：", key="input_reg_2")
-        if st.form_submit_button("👉 進入下一個遊戲 (Go to Naming Game)"):
+        if st.form_submit_button("👉 繼續 (Next Step)"):
             spoken = [w.strip() for w in user_answer.replace("，", ",").split(",") if w.strip()]
             st.session_state.reg_trial_2_items = spoken
-            st.session_state.stage = "naming"
-            st.session_state.current_item_index = 0
-            st.session_state.item_start_time = time.time()
+            # Navigate to the explicit reminder/notice page
+            st.session_state.stage = "memory_reg_notice"
             st.rerun()
 
-# --- STAGE 4: NAMING GAME (INTERFERENCE / DISTRACTOR TASK) ---
+# --- STAGE 4: MEMORY REMINDER NOTICE PAGE ---
+elif st.session_state.stage == "memory_reg_notice":
+    st.title("📌 重要提示 (Important Notice)")
+    st.markdown(
+        """
+    <div class="notice-card">
+        <h1 style="color:#D84315; font-size:36px; margin-bottom:15px;">請牢記這 5 個買菜詞語！</h1>
+        <p style="font-size:24px; color:#424242; line-height:1.6;">
+            <b>在完成下一個小遊戲後，我們會要求你再次講出這 5 個詞語！</b>
+        </p>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    if st.button("👉 我明白了，開始動物遊戲 (Proceed to Animal Game)"):
+        st.session_state.stage = "naming"
+        st.session_state.current_item_index = 0
+        st.session_state.item_start_time = time.time()
+        st.rerun()
+
+# --- STAGE 5: NAMING GAME (INTERFERENCE / DISTRACTOR TASK) ---
 elif st.session_state.stage == "naming":
     index = st.session_state.current_item_index
     item = NAMING_ITEMS[index]
@@ -384,7 +413,7 @@ elif st.session_state.stage == "naming":
             advance_naming_item()
             st.rerun()
 
-# --- STAGE 5: DELAYED RECALL (FREE RECALL) ---
+# --- STAGE 6: DELAYED RECALL (FREE RECALL) ---
 elif st.session_state.stage == "delayed_recall_free":
     st.title("⏳ 延遲記憶測試 (自由回憶)")
     st.markdown(
@@ -429,7 +458,7 @@ elif st.session_state.stage == "delayed_recall_free":
                 st.session_state.stage = "complete"
             st.rerun()
 
-# --- STAGE 6: DELAYED RECALL (CUED & MULTIPLE CHOICE) ---
+# --- STAGE 7: DELAYED RECALL (CUED & MULTIPLE CHOICE) ---
 elif st.session_state.stage == "delayed_recall_cued":
     st.title("💡 延遲記憶測試 (提示回憶 - 臨床參考)")
     st.markdown(
@@ -463,7 +492,7 @@ elif st.session_state.stage == "delayed_recall_cued":
             st.session_state.stage = "complete"
             st.rerun()
 
-# --- STAGE 7: COMPLETE & CLINICAL TELEMETRY DASHBOARD ---
+# --- STAGE 8: COMPLETE & CLINICAL TELEMETRY DASHBOARD ---
 elif st.session_state.stage == "complete":
     st.balloons()
     st.title("🎉 完成所有任務！感謝您的參與！")
