@@ -150,26 +150,30 @@ elif st.session_state.stage == "gameplay":
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
     body {{ margin:0; font-family:sans-serif; }}
-    button {{ width:100%; height:60px; font-size:20px; font-weight:bold; color:white; background:#E65100; border:0; border-radius:12px; cursor:pointer; width:100%; }}
+    button {{ width:100%; height:60px; font-size:20px; font-weight:bold; color:white; background:#2E7D32; border:0; border-radius:12px; cursor:pointer; width:100%; transition: background 0.3s; }}
     .status {{ font-size:18px; text-align:center; margin:8px 0; min-height:24px; }}
     </style></head><body>
     <button id="mic" type="button">🎤 按此說話 (Tap & Say)</button>
     <div class="status" id="status">點擊上方按鈕並講出名稱</div>
 
-    // Enable chrome mic
     <script>
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const mic = document.getElementById('mic'), status = document.getElementById('status');
     let recognition = null, listening = false;
 
+    function resetToStandby() {{
+      listening = false;
+      mic.style.background = '#2E7D32';
+      mic.textContent = '🎤 按此說話 (Tap & Say)';
+      status.textContent = '🟢 待機中，點擊上方按鈕並講出名稱';
+    }}
+
     function injectValueIntoStreamlitWidget(text) {{
-      // Find the text input in Streamlit's main window
       const doc = window.parent.document;
       const inputs = doc.querySelectorAll('input[type="text"], textarea');
       if (inputs.length > 0) {{
         const target = inputs[0];
         
-        // Use React's native ValueSetter to ensure Streamlit's state manager registers the value change
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
           window.HTMLInputElement.prototype, "value"
         ) || Object.getOwnPropertyDescriptor(
@@ -182,7 +186,6 @@ elif st.session_state.stage == "gameplay":
           target.value = text;
         }}
 
-        // Dispatch React events so Streamlit knows the text box changed
         target.dispatchEvent(new Event('input', {{ bubbles: true }}));
         target.dispatchEvent(new Event('change', {{ bubbles: true }}));
       }}
@@ -203,22 +206,23 @@ elif st.session_state.stage == "gameplay":
 
       recognition.onresult = (event) => {{
         const text = event.results[0][0].transcript.trim();
-        status.textContent = '🎧 聽到: ' + text;
-        mic.style.background = '#2E7D32';
-        mic.textContent = '🎤 重新錄音';
+        status.textContent = '✅ 聽到: ' + text;
         
         // Inject into Streamlit React widget natively
         injectValueIntoStreamlitWidget(text);
       }};
 
       recognition.onerror = (event) => {{
-        listening = false;
-        mic.style.background = '#E65100';
-        mic.textContent = '🎤 按此說話 (Tap & Say)';
+        resetToStandby();
         status.textContent = '⚠️ 未能識別，請再試一次';
       }};
 
-      recognition.onend = () => {{ listening = false; }};
+      // Handles speech timeouts, manual stops, and natural ends
+      recognition.onend = () => {{
+        if (listening) {{
+          resetToStandby();
+        }}
+      }};
     }} else {{
       mic.disabled = true;
       status.textContent = '❌ 瀏覽器不支援語音功能';
@@ -226,7 +230,11 @@ elif st.session_state.stage == "gameplay":
 
     mic.onclick = () => {{
       if(!recognition) return;
-      if(listening) {{ recognition.stop(); return; }}
+      if(listening) {{ 
+        recognition.stop(); 
+        resetToStandby();
+        return; 
+      }}
       try {{ recognition.start(); }} catch(e) {{}}
     }};
     </script></body></html>
