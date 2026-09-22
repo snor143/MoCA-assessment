@@ -68,19 +68,27 @@ h3 { font-size: 26px !important; font-weight: bold !important; color: var(--text
     color: var(--text-primary) !important;
 }
 
-/* Button Formatting */
+/* Fixed High-Contrast Button Formatting Override */
 .stButton>button {
-    width: 100%;
-    height: 70px;
+    width: 100% !important;
+    height: 70px !important;
     font-size: 24px !important;
     font-weight: bold !important;
-    border-radius: 16px;
-    background: #2E7D32;
-    color: white !important;
-    border: 0;
-    margin-bottom: 12px;
+    border-radius: 16px !important;
+    background-color: #1B5E20 !important;
+    color: #FFFFFF !important;
+    border: 2px solid #2E7D32 !important;
+    margin-bottom: 12px !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;
 }
-.stButton>button:hover { background: #1B5E20; }
+.stButton>button:hover {
+    background-color: #003300 !important;
+    color: #FFFFFF !important;
+    border-color: #1B5E20 !important;
+}
+.stButton>button p, .stButton>button span {
+    color: #FFFFFF !important;
+}
 
 /* Custom Cards */
 .instruction-card {
@@ -97,6 +105,15 @@ h3 { font-size: 26px !important; font-weight: bold !important; color: var(--text
     border-left: 10px solid var(--notice-border);
     text-align: center;
     margin-bottom: 25px;
+}
+
+/* Big Naming Emoji Styling */
+.big-naming-emoji {
+    font-size: 200px !important;
+    line-height: 1 !important;
+    text-align: center;
+    margin: 20px 0;
+    user-select: none;
 }
 </style>
 """,
@@ -168,9 +185,9 @@ def render_audio_speaker_component(words_list, key_suffix):
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
     body {{ margin:0; font-family:sans-serif; text-align:center; background:transparent; }}
-    button {{ width:100%; height:65px; font-size:22px; font-weight:bold; color:white; background:#1976D2; border:0; border-radius:14px; cursor:pointer; transition: background 0.3s; }}
-    button:hover {{ background:#0D47A1; }}
-    .status {{ font-size:20px; margin-top:10px; font-weight:bold; color:#1976D2; }}
+    button {{ width:100%; height:65px; font-size:22px; font-weight:bold; color:#FFFFFF !important; background:#0D47A1; border:2px solid #1565C0; border-radius:14px; cursor:pointer; transition: background 0.3s; box-shadow:0 4px 10px rgba(0,0,0,0.15); }}
+    button:hover {{ background:#002171; }}
+    .status {{ font-size:20px; margin-top:10px; font-weight:bold; color:#0D47A1; }}
     </style></head><body>
     <button id="speak_btn_{key_suffix}" type="button">▶️ 按此開始播放語音 (Start Speech)</button>
     <div class="status" id="status_{key_suffix}">準備好，然後點擊上方按鈕收聽</div>
@@ -208,7 +225,7 @@ def render_audio_speaker_component(words_list, key_suffix):
           status.textContent = '✅ 播放完畢，請講出你記得的詞語';
           isPlaying = false;
           btn.disabled = false;
-          btn.style.background = '#1976D2';
+          btn.style.background = '#0D47A1';
           btn.textContent = '🔄 重播語音 (Replay Words)';
           return;
         }}
@@ -231,7 +248,7 @@ def render_audio_speaker_component(words_list, key_suffix):
             status.textContent = '✅ 播放完畢，請講出你記得的詞語';
             isPlaying = false;
             btn.disabled = false;
-            btn.style.background = '#1976D2';
+            btn.style.background = '#0D47A1';
             btn.textContent = '🔄 重播語音 (Replay Words)';
           }}
         }};
@@ -261,8 +278,9 @@ def render_mic_component(key_suffix, continuous_mode=False):
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
     body {{ margin:0; font-family:sans-serif; background:transparent; }}
-    button {{ width:100%; height:65px; font-size:22px; font-weight:bold; color:white; background:#2E7D32; border:0; border-radius:14px; cursor:pointer; transition: background 0.3s; }}
-    .status {{ font-size:18px; text-align:center; margin:8px 0; min-height:24px; color:#2E7D32; font-weight:bold; }}
+    button {{ width:100%; height:65px; font-size:22px; font-weight:bold; color:#FFFFFF !important; background:#1B5E20; border:2px solid #2E7D32; border-radius:14px; cursor:pointer; transition: background 0.3s; box-shadow:0 4px 10px rgba(0,0,0,0.15); }}
+    button:hover {{ background:#003300; }}
+    .status {{ font-size:18px; text-align:center; margin:8px 0; min-height:24px; color:#1B5E20; font-weight:bold; }}
     </style></head><body>
     <button id="mic_{key_suffix}" type="button">🎤 開啟麥克風 Speak</button>
     <div class="status" id="status_{key_suffix}">點擊上方按鈕開始語音輸入</div>
@@ -277,7 +295,7 @@ def render_mic_component(key_suffix, continuous_mode=False):
 
     function resetToStandby() {{
       listening = false;
-      mic.style.background = '#2E7D32';
+      mic.style.background = '#1B5E20';
       mic.textContent = '🎤 開啟麥克風 Speak';
       status.textContent = '🟢 點擊上方按鈕開始語音輸入';
     }}
@@ -532,7 +550,7 @@ elif st.session_state.stage == "naming":
 
     st.markdown(f"<p style='font-size:22px;text-align:center;'>動物命名: {index+1} / {len(NAMING_ITEMS)}</p>", unsafe_allow_html=True)
     st.markdown("<h2 style='text-align:center;'>請大聲講出，這是什麼動物？</h2>", unsafe_allow_html=True)
-    st.markdown(f"<div style='font-size:130px;text-align:center;margin:15px 0;'>{item['emoji']}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='big-naming-emoji'>{item['emoji']}</div>", unsafe_allow_html=True)
 
     render_mic_component(f"naming_{index}", continuous_mode=False)
 
