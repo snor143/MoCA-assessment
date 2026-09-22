@@ -104,6 +104,13 @@ def render_audio_speaker_component(words_list, key_suffix):
     const status = document.getElementById('status_{key_suffix}');
     let isPlaying = false;
 
+    // Pre-load voices for browsers requiring dynamic async fetching
+    if ('speechSynthesis' in window) {{
+      window.speechSynthesis.onvoiceschanged = () => {{
+        window.speechSynthesis.getVoices();
+      }};
+    }}
+
     function speakWords() {{
       if (!('speechSynthesis' in window)) {{
         status.textContent = '❌ 瀏覽器不支援語音合成';
@@ -116,6 +123,7 @@ def render_audio_speaker_component(words_list, key_suffix):
       isPlaying = true;
       btn.disabled = true;
       btn.style.background = '#757575';
+      status.textContent = '🔊 正在播放詞語中... 請專心收聽';
       
       let index = 0;
 
@@ -129,14 +137,22 @@ def render_audio_speaker_component(words_list, key_suffix):
           return;
         }}
 
-        const utterance = new SpeechSynthesisUtterance(word);
+        // Fixed reference error (words[index] instead of word)
+        const utterance = new SpeechSynthesisUtterance(words[index]);
         utterance.lang = 'zh-HK';
         utterance.rate = 0.85; // Natural Cantonese pace
+
+        // Attempt to match Cantonese voice if available in system
+        const voices = window.speechSynthesis.getVoices();
+        const hkVoice = voices.find(v => v.lang === 'zh-HK' || v.lang === 'yue-Hant-HK' || v.lang.includes('HK'));
+        if (hkVoice) {{
+          utterance.voice = hkVoice;
+        }}
 
         utterance.onend = () => {{
           index++;
           if (index < words.length) {{
-            // Exactly 1 second delay between words
+            // 1 second delay between words
             setTimeout(speakNext, 1000);
           }} else {{
             status.textContent = '✅ 播放完畢，請講出你記得的詞語';
@@ -147,7 +163,7 @@ def render_audio_speaker_component(words_list, key_suffix):
           }}
         }};
 
-        utterance.onerror = () => {{
+        utterance.onerror = (e) => {{
           index++;
           setTimeout(speakNext, 1000);
         }};
