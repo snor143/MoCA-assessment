@@ -22,7 +22,7 @@ st.markdown(
 .stButton>button { width:100%; height:65px; font-size:20px !important; font-weight:bold; border-radius:16px; background:#2E7D32; color:white; border:0; margin-bottom:12px; }
 .stButton>button:hover { background:#1B5E20; }
 .instruction-card { background:#F0F7F4; padding:20px; border-radius:16px; border-left:8px solid #2E7D32; margin-bottom:20px; }
-.word-card { background:#FFF3E0; border-radius:12px; padding:16px; margin:6px; text-align:center; font-size:26px; font-weight:bold; color:#E65100; display:inline-block; width:18%; }
+.audio-card { background:#E8F5E9; border-radius:12px; padding:20px; text-align:center; font-size:22px; font-weight:bold; color:#1B5E20; margin-bottom:15px; border:2px dashed #2E7D32; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -30,7 +30,7 @@ st.markdown(
 
 # Initialize global session state
 for key, value in {
-    "stage": "intro",  # Options: intro, naming, memory_reg_1, memory_reg_2, delayed_recall_free, delayed_recall_cued, complete
+    "stage": "intro",  # Flow: intro -> memory_reg_1 -> memory_reg_2 -> naming -> delayed_recall_free -> delayed_recall_cued -> complete
     "current_item_index": 0,
     "telemetry_logs": [],
     "item_start_time": None,
@@ -45,7 +45,16 @@ for key, value in {
     if key not in st.session_state:
         st.session_state[key] = value
 
-# GAME 1: NAMING ITEMS
+# GAME DATA 1: MEMORY ITEMS (HK MARKET EQUIVALENTS)
+MEMORY_ITEMS = [
+    {"id": "mem_1", "name": "菜心", "category": "一種蔬菜", "options": ["菜心", "芥蘭", "白菜"]},
+    {"id": "mem_2", "name": "石斑", "category": "一種海鮮/魚類", "options": ["石斑", "鯇魚", "三文魚"]},
+    {"id": "mem_3", "name": "豆腐", "category": "一種豆製品", "options": ["豆腐", "腐竹", "豆漿"]},
+    {"id": "mem_4", "name": "蘋果", "category": "一種水果", "options": ["蘋果", "香蕉", "草莓"]},
+    {"id": "mem_5", "name": "雞蛋", "category": "一種蛋類", "options": ["雞蛋", "鴨蛋", "豬肉"]},
+]
+
+# GAME DATA 2: NAMING ITEMS (DISTRACTOR TASK)
 NAMING_ITEMS = [
     {
         "id": "item_1",
@@ -73,23 +82,85 @@ NAMING_ITEMS = [
     },
 ]
 
-# GAME 2: MEMORY ITEMS (HK MARKET EQUIVALENTS)
-MEMORY_ITEMS = [
-    {"id": "mem_1", "name": "菜心", "category": "一種蔬菜", "options": ["菜心", "芥蘭", "白菜"]},
-    {"id": "mem_2", "name": "石斑", "category": "一種海鮮/魚類", "options": ["石斑", "鯇魚", "三文魚"]},
-    {"id": "mem_3", "name": "豆腐", "category": "一種豆製品", "options": ["豆腐", "腐竹", "豆漿"]},
-    {"id": "mem_4", "name": "蘋果", "category": "一種水果", "options": ["蘋果", "香蕉", "草莓"]},
-    {"id": "mem_5", "name": "雞蛋", "category": "一種蛋類", "options": ["雞蛋", "鴨蛋", "豬肉"]},
-]
+
+def render_audio_speaker_component(words_list, key_suffix):
+    """Component to automatically read Cantonese words sequentially with 1-second interval."""
+    words_js_array = str(words_list)
+    components.html(
+        f"""
+    <!doctype html><html><head><meta charset="utf-8"><style>
+    body {{ margin:0; font-family:sans-serif; text-align:center; }}
+    button {{ width:100%; height:50px; font-size:18px; font-weight:bold; color:white; background:#1976D2; border:0; border-radius:12px; cursor:pointer; }}
+    .status {{ font-size:16px; margin-top:8px; font-weight:bold; color:#1976D2; }}
+    </style></head><body>
+    <button id="speak_btn_{key_suffix}" type="button">🔊 重新播放語音 (Replay Words)</button>
+    <div class="status" id="status_{key_suffix}">準備播放語音...</div>
+
+    <script>
+    const words = {words_js_array};
+    const btn = document.getElementById('speak_btn_{key_suffix}');
+    const status = document.getElementById('status_{key_suffix}');
+
+    function speakWords() {{
+      if (!('speechSynthesis' in window)) {{
+        status.textContent = '❌ 瀏覽器不支援語音合成';
+        return;
+      }}
+      
+      window.speechSynthesis.cancel(); // Stop any ongoing speech
+      let index = 0;
+
+      function speakNext() {{
+        if (index >= words.length) {{
+          status.textContent = '✅ 播放完畢，請講出你記得的詞語';
+          return;
+        }}
+
+        const word = words[index];
+        status.textContent = '🔊 正在播放 (' + (index + 1) + '/5)...';
+        
+        const utterance = new SpeechSynthesisUtterance(word);
+        utterance.lang = 'zh-HK';
+        utterance.rate = 0.85; // Natural speaking rate
+
+        utterance.onend = () => {{
+          index++;
+          if (index < words.length) {{
+            // 1 second (1000ms) delay between words
+            setTimeout(speakNext, 1000);
+          }} else {{
+            status.textContent = '✅ 播放完畢，請講出你記得的詞語';
+          }}
+        }};
+
+        utterance.onerror = () => {{
+          index++;
+          setTimeout(speakNext, 1000);
+        }};
+
+        window.speechSynthesis.speak(utterance);
+      }}
+
+      speakNext();
+    }}
+
+    // Auto play on render
+    setTimeout(speakWords, 500);
+
+    btn.onclick = speakWords;
+    </script></body></html>
+    """,
+        height=90,
+    )
 
 
 def render_mic_component(key_suffix):
-    """Reusable Web Speech API Mic component with standby reset logic."""
+    """Reusable Web Speech API Mic component for voice input."""
     components.html(
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
     body {{ margin:0; font-family:sans-serif; }}
-    button {{ width:100%; height:55px; font-size:18px; font-weight:bold; color:white; background:#2E7D32; border:0; border-radius:12px; cursor:pointer; width:100%; transition: background 0.3s; }}
+    button {{ width:100%; height:55px; font-size:18px; font-weight:bold; color:white; background:#2E7D32; border:0; border-radius:12px; cursor:pointer; transition: background 0.3s; }}
     .status {{ font-size:16px; text-align:center; margin:6px 0; min-height:22px; }}
     </style></head><body>
     <button id="mic_{key_suffix}" type="button">🎤 按此說話 (Tap & Say)</button>
@@ -170,16 +241,15 @@ def render_mic_component(key_suffix):
     )
 
 
-# Function to evaluate naming answers
 def evaluate_naming_answer(answer):
     item = NAMING_ITEMS[st.session_state.current_item_index]
     elapsed = round(time.time() - st.session_state.item_start_time, 2) if st.session_state.item_start_time else 0.0
     clean = answer.strip().replace(" ", "").replace("呢個係", "").replace("這是", "").replace("呢隻係", "")
     correct = any(s in answer or s in clean for s in item["acceptable_synonyms"])
-    
+
     if correct:
         st.session_state.moca_naming_score += item["moca_weight"]
-        
+
     st.session_state.telemetry_logs.append({
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "task": "naming",
@@ -197,8 +267,8 @@ def advance_naming_item():
         st.session_state.current_item_index += 1
         st.session_state.item_start_time = time.time()
     else:
-        # Move seamlessly into Game 2 (Memory Registration)
-        st.session_state.stage = "memory_reg_1"
+        # Move directly into Delayed Memory Recall
+        st.session_state.stage = "delayed_recall_free"
         st.session_state.item_start_time = time.time()
 
 
@@ -209,15 +279,16 @@ if st.session_state.stage == "intro":
         """
     <div class="instruction-card">
         <h2>今天我們要去街市買菜！</h2>
-        <p style="font-size:20px;">本遊戲共有兩個部分：</p>
-        <p style="font-size:18px;">1. <b>動物辨識</b>（大聲講出名稱）</p>
-        <p style="font-size:18px;">2. <b>買菜記憶力測試</b>（記住買菜清單）</p>
+        <p style="font-size:20px;">測試流程：</p>
+        <p style="font-size:18px;">1. <b>聽講詞語 (學習)</b>：請聽語音讀出5個買菜詞語並重複</p>
+        <p style="font-size:18px;">2. <b>動物命名 (干擾任務)</b>：大聲講出動物名稱</p>
+        <p style="font-size:18px;">3. <b>延遲回憶 (記憶測試)</b>：講出剛才記住的買菜詞語</p>
     </div>
     """,
         unsafe_allow_html=True,
     )
     if st.button("開始 (Start)"):
-        st.session_state.stage = "naming"
+        st.session_state.stage = "memory_reg_1"
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
@@ -225,7 +296,66 @@ if st.session_state.stage == "intro":
         st.session_state.item_start_time = time.time()
         st.rerun()
 
-# --- STAGE 2: GAME 1 - NAMING ---
+# --- STAGE 2: MEMORY REGISTRATION TRIAL 1 (AUDIO ONLY) ---
+elif st.session_state.stage == "memory_reg_1":
+    st.title("🧠 買菜記性測試 (第一次學習)")
+    st.markdown(
+        """
+    <div class="instruction-card">
+        <p style="font-size:22px;">請仔細<b>聽語音</b>讀出以下 <b>5 個詞語</b>：</p>
+        <p style="font-size:18px;color:#D32F2F;">⚠️ 提示：讀完後請盡量講出你記得的詞語（次序並不重要）。<b>此階段不計分</b>。</p>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("<div class='audio-card'>🔊 請戴上耳機或打開喇叭收聽詞語</div>", unsafe_allow_html=True)
+
+    # Audio player reading words sequentially with 1 sec delay
+    word_names = [item["name"] for item in MEMORY_ITEMS]
+    render_audio_speaker_component(word_names, "reg_1")
+
+    render_mic_component("reg_1")
+
+    with st.form(key="form_reg_1"):
+        user_answer = st.text_input("請講出剛才聽到的詞語（可以用點擊語音輸入）：", key="input_reg_1")
+        if st.form_submit_button("👉 完成第一次嘗試 (Next Trial)"):
+            spoken = [w.strip() for w in user_answer.replace("，", ",").split(",") if w.strip()]
+            st.session_state.reg_trial_1_items = spoken
+            st.session_state.stage = "memory_reg_2"
+            st.rerun()
+
+# --- STAGE 3: MEMORY REGISTRATION TRIAL 2 (AUDIO ONLY) ---
+elif st.session_state.stage == "memory_reg_2":
+    st.title("🧠 買菜記性測試 (第二次學習)")
+    st.markdown(
+        """
+    <div class="instruction-card">
+        <p style="font-size:22px;">我會重複讀第二次這 5 個詞語。請嘗試把它們記住並說給我聽。</p>
+        <p style="font-size:20px;color:#2E7D32;">💡 提示：<b>稍後完成其他任務後，我會再問你這些詞語！</b></p>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("<div class='audio-card'>🔊 請戴上耳機或打開喇叭收聽詞語</div>", unsafe_allow_html=True)
+
+    word_names = [item["name"] for item in MEMORY_ITEMS]
+    render_audio_speaker_component(word_names, "reg_2")
+
+    render_mic_component("reg_2")
+
+    with st.form(key="form_reg_2"):
+        user_answer = st.text_input("請再次講出記得的詞語：", key="input_reg_2")
+        if st.form_submit_button("👉 進入下一個遊戲 (Go to Naming Game)"):
+            spoken = [w.strip() for w in user_answer.replace("，", ",").split(",") if w.strip()]
+            st.session_state.reg_trial_2_items = spoken
+            st.session_state.stage = "naming"
+            st.session_state.current_item_index = 0
+            st.session_state.item_start_time = time.time()
+            st.rerun()
+
+# --- STAGE 4: NAMING GAME (INTERFERENCE / DISTRACTOR TASK) ---
 elif st.session_state.stage == "naming":
     index = st.session_state.current_item_index
     item = NAMING_ITEMS[index]
@@ -254,67 +384,14 @@ elif st.session_state.stage == "naming":
             advance_naming_item()
             st.rerun()
 
-# --- STAGE 3: GAME 2 (PART 1) - MEMORY REGISTRATION TRIAL 1 ---
-elif st.session_state.stage == "memory_reg_1":
-    st.title("🧠 買菜記性測試 (第一次學習)")
-    st.markdown(
-        """
-    <div class="instruction-card">
-        <p style="font-size:22px;">這是一個記憶力測試。請聽清楚及記住以下<b>5個詞語</b>：</p>
-        <p style="font-size:18px;color:#D32F2F;">⚠️ 提示：讀完後請盡量講出你記得的詞語（次序並不重要）。<b>此階段不計分</b>。</p>
-    </div>
-    """,
-        unsafe_allow_html=True,
-    )
-
-    words_html = "".join([f"<div class='word-card'>{item['name']}</div>" for item in MEMORY_ITEMS])
-    st.markdown(f"<div style='text-align:center;'>{words_html}</div>", unsafe_allow_html=True)
-
-    render_mic_component("reg_1")
-
-    with st.form(key="form_reg_1"):
-        user_answer = st.text_input("請講出剛才的詞語（可以用點擊語音輸入）：", key="input_reg_1")
-        if st.form_submit_button("👉 完成第一次嘗試 (Next Trial)"):
-            spoken = [w.strip() for w in user_answer.replace("，", ",").split(",") if w.strip()]
-            st.session_state.reg_trial_1_items = spoken
-            st.session_state.stage = "memory_reg_2"
-            st.rerun()
-
-# --- STAGE 4: GAME 2 (PART 1) - MEMORY REGISTRATION TRIAL 2 ---
-elif st.session_state.stage == "memory_reg_2":
-    st.title("🧠 買菜記性測試 (第二次學習)")
-    st.markdown(
-        """
-    <div class="instruction-card">
-        <p style="font-size:22px;">我會重複讀第二次這5個詞語。請嘗試把它們記住並說給我聽，越多越好。</p>
-        <p style="font-size:20px;color:#2E7D32;">💡 提示：<b>在整個測試完結時，我會再問你這些詞語！</b></p>
-    </div>
-    """,
-        unsafe_allow_html=True,
-    )
-
-    words_html = "".join([f"<div class='word-card'>{item['name']}</div>" for item in MEMORY_ITEMS])
-    st.markdown(f"<div style='text-align:center;'>{words_html}</div>", unsafe_allow_html=True)
-
-    render_mic_component("reg_2")
-
-    with st.form(key="form_reg_2"):
-        user_answer = st.text_input("請再次講出記得的詞語：", key="input_reg_2")
-        if st.form_submit_button("👉 進入延遲回憶測試 (Go to Delayed Recall)"):
-            spoken = [w.strip() for w in user_answer.replace("，", ",").split(",") if w.strip()]
-            st.session_state.reg_trial_2_items = spoken
-            st.session_state.stage = "delayed_recall_free"
-            st.session_state.item_start_time = time.time()
-            st.rerun()
-
-# --- STAGE 5: GAME 2 (PART 2) - DELAYED RECALL (FREE RECALL) ---
+# --- STAGE 5: DELAYED RECALL (FREE RECALL) ---
 elif st.session_state.stage == "delayed_recall_free":
     st.title("⏳ 延遲記憶測試 (自由回憶)")
     st.markdown(
         """
     <div class="instruction-card">
-        <h2>我之前讀了一些買菜詞語給你聽，叫你記住它們。</h2>
-        <p style="font-size:22px;"><b>現在請你講出你記得的那些詞語。</b>（每個正確給1分）</p>
+        <h2>最開始我讀了一些買菜詞語給你聽，叫你記住它們。</h2>
+        <p style="font-size:22px;"><b>現在請你講出你記得的那些買菜詞語。</b>（每個正確給1分，共5分）</p>
     </div>
     """,
         unsafe_allow_html=True,
@@ -352,7 +429,7 @@ elif st.session_state.stage == "delayed_recall_free":
                 st.session_state.stage = "complete"
             st.rerun()
 
-# --- STAGE 6: GAME 2 (PART 2) - DELAYED RECALL (CUED & MULTIPLE CHOICE) ---
+# --- STAGE 6: DELAYED RECALL (CUED & MULTIPLE CHOICE) ---
 elif st.session_state.stage == "delayed_recall_cued":
     st.title("💡 延遲記憶測試 (提示回憶 - 臨床參考)")
     st.markdown(
