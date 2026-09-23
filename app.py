@@ -10,34 +10,15 @@ import streamlit.components.v1 as components
 st.set_page_config(
     page_title="探索香港街市 (Explore HK Market)",
     page_icon="🛒",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="collapsed",
 )
 
-# Custom UI Styling with Dynamic Viewport Units
+# Custom UI Styling (Clean Vertical Layout + High-Contrast Typography)
 st.markdown(
     """
 <style>
-/* Lock body height to prevent vertical scrolling */
-html, body, [data-testid="stAppViewContainer"] {
-    height: 100vh !important;
-    max-height: 100vh !important;
-    overflow: hidden !important;
-}
-
-[data-testid="stMainBlockContainer"] {
-    max-width: 1100px !important;
-    padding-top: 1vh !important;
-    padding-bottom: 1vh !important;
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-    height: 98vh !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-}
-
-/* Responsive Colors for Light & Dark Themes */
+/* Base Typography and Theme Variable Overrides */
 :root {
     --card-bg: #F0F7F4;
     --card-border: #2E7D32;
@@ -60,50 +41,50 @@ html, body, [data-testid="stAppViewContainer"] {
     }
 }
 
-/* Dynamic Font Sizing strictly scaled to Viewport Height (vh) */
+/* Clear Page Flow Headers */
 h1 {
-    font-size: clamp(24px, 4vh, 42px) !important;
+    font-size: 32px !important;
     font-weight: bold !important;
     color: var(--text-primary) !important;
-    margin: 0 0 1vh 0 !important;
     text-align: center;
+    margin-bottom: 12px !important;
+    padding-top: 0px !important;
 }
 h2 {
-    font-size: clamp(20px, 3.2vh, 34px) !important;
+    font-size: 26px !important;
     font-weight: bold !important;
     color: var(--text-primary) !important;
-    margin: 0 0 1vh 0 !important;
     text-align: center;
+    margin-bottom: 10px !important;
 }
 
-/* Streamlit Input & Radio Dynamic Height & Fonts */
+/* Input Fields */
 .stTextInput > div > div > input {
-    font-size: clamp(18px, 2.5vh, 28px) !important;
-    height: clamp(50px, 7vh, 75px) !important;
+    font-size: 22px !important;
+    height: 58px !important;
     background-color: var(--input-bg) !important;
     color: var(--input-text) !important;
-    border-radius: 12px !important;
+    border-radius: 10px !important;
 }
 
 .stRadio label, .stRadio div[role="radiogroup"] p {
-    font-size: clamp(18px, 2.8vh, 30px) !important;
+    font-size: 22px !important;
     font-weight: bold !important;
     color: var(--text-primary) !important;
 }
 
-/* Form Buttons */
+/* Submit Buttons */
 .stButton>button {
     width: 100% !important;
-    height: clamp(50px, 7.5vh, 80px) !important;
-    font-size: clamp(20px, 3vh, 32px) !important;
+    height: 60px !important;
+    font-size: 22px !important;
     font-weight: bold !important;
-    border-radius: 14px !important;
+    border-radius: 12px !important;
     background-color: #1B5E20 !important;
     color: #FFFFFF !important;
     border: 2px solid #2E7D32 !important;
-    margin-top: 0.5vh !important;
-    margin-bottom: 0px !important;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;
+    margin-top: 10px !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12) !important;
 }
 .stButton>button:hover {
     background-color: #003300 !important;
@@ -113,29 +94,35 @@ h2 {
     color: #FFFFFF !important;
 }
 
-/* Custom Responsive Containers */
+/* Instruction & Notice Cards */
 .instruction-card {
     background: var(--card-bg);
-    padding: clamp(10px, 2vh, 22px);
-    border-radius: 14px;
+    padding: 16px 20px;
+    border-radius: 12px;
     border-left: 8px solid var(--card-border);
-    margin-bottom: 1vh;
+    margin-bottom: 15px;
 }
+.instruction-card p {
+    font-size: 22px !important;
+    color: var(--text-primary) !important;
+    margin: 0 !important;
+    line-height: 1.4 !important;
+}
+
 .notice-card {
     background: var(--notice-bg);
     border-radius: 16px;
-    padding: clamp(15px, 3vh, 35px);
+    padding: 25px;
     border-left: 10px solid var(--notice-border);
     text-align: center;
-    margin-bottom: 1.5vh;
+    margin-bottom: 20px;
 }
 
-/* Viewport-dependent Animal Emoji size */
 .big-naming-emoji {
-    font-size: clamp(70px, 20vh, 180px) !important;
+    font-size: 140px !important;
     line-height: 1 !important;
     text-align: center;
-    margin: 1vh 0;
+    margin: 15px 0;
     user-select: none;
 }
 </style>
@@ -207,9 +194,9 @@ def render_instruction_speaker_component(instruction_text, key_suffix):
     components.html(
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
-    body {{ margin:0; font-family:sans-serif; background:transparent; display:flex; align-items:center; }}
-    button {{ width:100%; height:38px; font-size:clamp(13px, 1.8vh, 17px); font-weight:bold; color:#FFFFFF !important; background:#558B2F; border:1.5px solid #33691E; border-radius:8px; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.12); display:flex; align-items:center; justify-content:center; gap:6px; }}
-    button:hover {{ background:#33691E; }}
+    body {{ margin:0; font-family:sans-serif; background:transparent; display:flex; justify-content:center; }}
+    button {{ width:100%; max-width:320px; height:42px; font-size:16px; font-weight:bold; color:#FFFFFF !important; background:#43A047; border:1.5px solid #2E7D32; border-radius:8px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1); }}
+    button:hover {{ background:#2E7D32; }}
     </style></head><body>
     <button id="inst_btn_{key_suffix}" type="button">🔊 讀出指引 (Read Instruction)</button>
 
@@ -235,7 +222,7 @@ def render_instruction_speaker_component(instruction_text, key_suffix):
     btn.onclick = speakInstruction;
     </script></body></html>
     """,
-        height=42,
+        height=48,
     )
 
 
@@ -246,11 +233,11 @@ def render_audio_speaker_component(words_list, key_suffix):
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
     body {{ margin:0; font-family:sans-serif; text-align:center; background:transparent; }}
-    button {{ width:100%; height:8vh; min-height:50px; max-height:75px; font-size:clamp(16px, 2.4vh, 26px); font-weight:bold; color:#FFFFFF !important; background:#0D47A1; border:2px solid #1565C0; border-radius:14px; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.15); }}
+    button {{ width:100%; height:62px; font-size:20px; font-weight:bold; color:#FFFFFF !important; background:#0D47A1; border:2px solid #1565C0; border-radius:12px; cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,0.15); }}
     button:hover {{ background:#002171; }}
-    .status {{ font-size:clamp(14px, 2vh, 20px); margin-top:0.6vh; font-weight:bold; color:#0D47A1; }}
+    .status {{ font-size:15px; margin-top:6px; font-weight:bold; color:#0D47A1; }}
     </style></head><body>
-    <button id="speak_btn_{key_suffix}" type="button">▶️ 播放語音<br>(Play Words)</button>
+    <button id="speak_btn_{key_suffix}" type="button">▶️ 播放語音 (Play Words)</button>
     <div class="status" id="status_{key_suffix}">點擊播放</div>
 
     <script>
@@ -274,7 +261,7 @@ def render_audio_speaker_component(words_list, key_suffix):
       isPlaying = true;
       btn.disabled = true;
       btn.style.background = '#757575';
-      status.textContent = '🔊 正在播放...';
+      status.textContent = '🔊 正在播放中...';
       
       let index = 0;
 
@@ -284,7 +271,7 @@ def render_audio_speaker_component(words_list, key_suffix):
           isPlaying = false;
           btn.disabled = false;
           btn.style.background = '#0D47A1';
-          btn.innerHTML = '🔄 重播語音<br>(Replay Words)';
+          btn.textContent = '🔄 重播語音 (Replay Words)';
           return;
         }}
 
@@ -304,7 +291,7 @@ def render_audio_speaker_component(words_list, key_suffix):
             isPlaying = false;
             btn.disabled = false;
             btn.style.background = '#0D47A1';
-            btn.innerHTML = '🔄 重播語音<br>(Replay Words)';
+            btn.textContent = '🔄 重播語音 (Replay Words)';
           }}
         }};
 
@@ -318,22 +305,22 @@ def render_audio_speaker_component(words_list, key_suffix):
     btn.onclick = speakWords;
     </script></body></html>
     """,
-        height=110,
+        height=95,
     )
 
 
 def render_mic_component(key_suffix, continuous_mode=False):
-    """Web Speech API Mic component formatted for parallel layout."""
+    """Web Speech API Mic component."""
     is_continuous_js = "true" if continuous_mode else "false"
     components.html(
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
     body {{ margin:0; font-family:sans-serif; background:transparent; }}
-    button {{ width:100%; height:8vh; min-height:50px; max-height:75px; font-size:clamp(16px, 2.4vh, 26px); font-weight:bold; color:#FFFFFF !important; background:#1B5E20; border:2px solid #2E7D32; border-radius:14px; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.15); }}
+    button {{ width:100%; height:62px; font-size:20px; font-weight:bold; color:#FFFFFF !important; background:#1B5E20; border:2px solid #2E7D32; border-radius:12px; cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,0.15); }}
     button:hover {{ background:#003300; }}
-    .status {{ font-size:clamp(13px, 1.8vh, 18px); text-align:center; margin-top:0.5vh; color:#1B5E20; font-weight:bold; }}
+    .status {{ font-size:15px; text-align:center; margin-top:6px; color:#1B5E20; font-weight:bold; }}
     </style></head><body>
-    <button id="mic_{key_suffix}" type="button">🎤 開啟麥克風<br>(Speak)</button>
+    <button id="mic_{key_suffix}" type="button">🎤 開啟麥克風 (Speak)</button>
     <div class="status" id="status_{key_suffix}">點擊開始語音</div>
 
     <script>
@@ -347,7 +334,7 @@ def render_mic_component(key_suffix, continuous_mode=False):
     function resetToStandby() {{
       listening = false;
       mic.style.background = '#1B5E20';
-      mic.innerHTML = '🎤 開啟麥克風<br>(Speak)';
+      mic.textContent = '🎤 開啟麥克風 (Speak)';
       status.textContent = '🟢 點擊開始語音';
     }}
 
@@ -405,7 +392,7 @@ def render_mic_component(key_suffix, continuous_mode=False):
       recognition.onstart = () => {{
         listening = true;
         mic.style.background = '#D32F2F';
-        mic.innerHTML = '⏹️ 停止麥克風';
+        mic.textContent = '⏹️ 停止麥克風';
         status.textContent = isContinuous ? '🔴 麥克風開啟中...' : '🔴 正在聆聽...';
         attachManualEditListener();
       }};
@@ -459,7 +446,7 @@ def render_mic_component(key_suffix, continuous_mode=False):
     }};
     </script></body></html>
     """,
-        height=110,
+        height=95,
     )
 
 
@@ -499,8 +486,8 @@ if st.session_state.stage == "intro":
     st.markdown(
         """
     <div class="instruction-card">
-        <h2 style="font-size: clamp(24px, 4vh, 40px) !important;">今天我們去超市吧！</h2>
-        <p style="font-size: clamp(18px, 3vh, 30px) !important; text-align: center; margin-top: 1vh;">馬上開始遊戲</p>
+        <h2 style="font-size: 28px !important; text-align: center;">今天我們去超市吧！</h2>
+        <p style="text-align: center;">馬上開始遊戲</p>
     </div>
     """,
         unsafe_allow_html=True,
@@ -513,103 +500,91 @@ if st.session_state.stage == "intro":
         st.session_state.moca_memory_score = 0
         st.rerun()
 
-# --- STAGE 2: MEMORY REGISTRATION TRIAL 1 (PARALLEL LAYOUT) ---
+# --- STAGE 2: MEMORY REGISTRATION TRIAL 1 ---
 elif st.session_state.stage == "memory_reg_1":
     inst_1 = "請聽清楚並記住 5 個詞語，完畢後說出你記得的，次序不限。"
-    
-    col_title, col_speaker = st.columns([3, 1])
-    with col_title:
-        st.title("🧠 記憶力遊戲 1")
-    with col_speaker:
-        render_instruction_speaker_component(inst_1, "reg_1_inst")
+
+    st.title("🧠 記憶力遊戲 1")
 
     st.markdown(
         f"""
     <div class="instruction-card">
-        <p style="font-size: clamp(16px, 2.4vh, 26px) !important; margin: 0;">{inst_1}</p>
+        <p>{inst_1}</p>
     </div>
     """,
         unsafe_allow_html=True,
     )
 
+    render_instruction_speaker_component(inst_1, "reg_1_inst")
+
     word_names = [item["name"] for item in MEMORY_ITEMS]
 
-    col_audio, col_mic, col_input = st.columns([1.2, 1.2, 2.0])
-
+    col_audio, col_mic = st.columns(2)
     with col_audio:
         render_audio_speaker_component(word_names, "reg_1")
-
     with col_mic:
         render_mic_component("reg_1", continuous_mode=True)
 
-    with col_input:
-        with st.form(key="form_reg_1"):
-            user_answer = st.text_input("記得的詞語：", key="input_reg_1")
-            if st.form_submit_button("👉 完成 (Finish)"):
-                spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
-                st.session_state.reg_trial_1_items = spoken
-                st.session_state.stage = "memory_reg_2"
-                st.rerun()
+    with st.form(key="form_reg_1"):
+        user_answer = st.text_input("記得的詞語：", key="input_reg_1")
+        if st.form_submit_button("👉 完成 (Finish)"):
+            spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
+            st.session_state.reg_trial_1_items = spoken
+            st.session_state.stage = "memory_reg_2"
+            st.rerun()
 
-# --- STAGE 3: MEMORY REGISTRATION TRIAL 2 (PARALLEL LAYOUT) ---
+# --- STAGE 3: MEMORY REGISTRATION TRIAL 2 ---
 elif st.session_state.stage == "memory_reg_2":
     inst_2 = "詞語會再播放一次，請再次講出記得的，包括剛才說過的。"
-    
-    col_title, col_speaker = st.columns([3, 1])
-    with col_title:
-        st.title("🧠 記憶力遊戲 2")
-    with col_speaker:
-        render_instruction_speaker_component(inst_2, "reg_2_inst")
+
+    st.title("🧠 記憶力遊戲 2")
 
     st.markdown(
         f"""
     <div class="instruction-card">
-        <p style="font-size: clamp(16px, 2.4vh, 26px) !important; margin: 0;">{inst_2}</p>
+        <p>{inst_2}</p>
     </div>
     """,
         unsafe_allow_html=True,
     )
 
+    render_instruction_speaker_component(inst_2, "reg_2_inst")
+
     word_names = [item["name"] for item in MEMORY_ITEMS]
 
-    col_audio, col_mic, col_input = st.columns([1.2, 1.2, 2.0])
-
+    col_audio, col_mic = st.columns(2)
     with col_audio:
         render_audio_speaker_component(word_names, "reg_2")
-
     with col_mic:
         render_mic_component("reg_2", continuous_mode=True)
 
-    with col_input:
-        with st.form(key="form_reg_2"):
-            user_answer = st.text_input("記得的詞語：", key="input_reg_2")
-            if st.form_submit_button("👉 完成 (Finish)"):
-                spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
-                st.session_state.reg_trial_2_items = spoken
-                st.session_state.stage = "memory_reg_notice"
-                st.rerun()
+    with st.form(key="form_reg_2"):
+        user_answer = st.text_input("記得的詞語：", key="input_reg_2")
+        if st.form_submit_button("👉 完成 (Finish)"):
+            spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
+            st.session_state.reg_trial_2_items = spoken
+            st.session_state.stage = "memory_reg_notice"
+            st.rerun()
 
 # --- STAGE 4: MEMORY REMINDER NOTICE PAGE ---
 elif st.session_state.stage == "memory_reg_notice":
     inst_notice = "請緊記這 5 個詞語！在整個測試完結時，會再問你那些詞語。"
-    
-    col_title, col_speaker = st.columns([3, 1])
-    with col_title:
-        st.title("📌 重要提示 (Important Notice)")
-    with col_speaker:
-        render_instruction_speaker_component(inst_notice, "notice_inst")
+
+    st.title("📌 重要提示 (Important Notice)")
 
     st.markdown(
         """
     <div class="notice-card">
-        <h1 style="color:#D84315; font-size: clamp(26px, 5.5vh, 55px) !important; line-height:1.2 !important; margin-bottom: 1.5vh !important;">請緊記這 5 個詞語！</h1>
-        <p style="font-size: clamp(20px, 3.8vh, 40px) !important; line-height:1.3 !important; margin: 0;">
+        <h1 style="color:#D84315; font-size: 38px !important; margin-bottom: 15px !important;">請緊記這 5 個詞語！</h1>
+        <p style="font-size: 26px !important; margin: 0;">
             <b>在整個測試完結時，會再問你那些詞語。</b>
         </p>
     </div>
     """,
         unsafe_allow_html=True,
     )
+
+    render_instruction_speaker_component(inst_notice, "notice_inst")
 
     if st.button("👉 我明白了"):
         st.session_state.stage = "naming"
@@ -623,89 +598,77 @@ elif st.session_state.stage == "naming":
     item = NAMING_ITEMS[index]
     inst_naming = "請大聲講出，這是什麼動物？"
 
-    col_title, col_speaker = st.columns([3, 1])
-    with col_title:
-        st.markdown(f"<p style='font-size:clamp(15px, 2.2vh, 24px);text-align:center;margin:0;'>動物命名: {index+1} / {len(NAMING_ITEMS)}</p>", unsafe_allow_html=True)
-    with col_speaker:
-        render_instruction_speaker_component(inst_naming, f"naming_{index}_inst")
+    st.markdown(f"<p style='font-size: 20px; text-align: center; margin: 0;'>動物命名: {index+1} / {len(NAMING_ITEMS)}</p>", unsafe_allow_html=True)
+    st.markdown("<h2>請大聲講出，這是什麼動物？</h2>", unsafe_allow_html=True)
 
-    st.markdown("<h2 style='text-align:center;'>請大聲講出，這是什麼動物？</h2>", unsafe_allow_html=True)
+    render_instruction_speaker_component(inst_naming, f"naming_{index}_inst")
+
     st.markdown(f"<div class='big-naming-emoji'>{item['emoji']}</div>", unsafe_allow_html=True)
 
-    col_mic, col_input = st.columns([1.2, 2.0])
+    render_mic_component(f"naming_{index}", continuous_mode=False)
 
-    with col_mic:
-        render_mic_component(f"naming_{index}", continuous_mode=False)
+    with st.form(key=f"naming_form_{index}"):
+        user_answer = st.text_input("答案：", key=f"user_input_{index}")
+        submit_btn = st.form_submit_button("👉 提交答案 / 下一題")
 
-    with col_input:
-        with st.form(key=f"naming_form_{index}"):
-            user_answer = st.text_input("答案：", key=f"user_input_{index}")
-            submit_btn = st.form_submit_button("👉 提交答案 / 下一題")
+        if submit_btn:
+            recorded_answer = user_answer.strip() if user_answer.strip() else "跳過"
+            evaluate_naming_answer(recorded_answer)
+            advance_naming_item()
+            st.rerun()
 
-            if submit_btn:
-                recorded_answer = user_answer.strip() if user_answer.strip() else "跳過"
-                evaluate_naming_answer(recorded_answer)
-                advance_naming_item()
-                st.rerun()
-
-# --- STAGE 6: DELAYED RECALL (FREE RECALL - PARALLEL) ---
+# --- STAGE 6: DELAYED RECALL (FREE RECALL) ---
 elif st.session_state.stage == "delayed_recall_free":
-    inst_free = "請講出最開始播放過給您聽的那 5 個詞語。"
+    inst_free = "最開始播放了一些詞語給你聽並請你記住它們。現在請你講出你記得的那些詞語："
 
-    col_title, col_speaker = st.columns([3, 1])
-    with col_title:
-        st.title("⏳ 延遲記憶遊戲")
-    with col_speaker:
-        render_instruction_speaker_component(inst_free, "free_recall_inst")
+    st.title("⏳ 延遲記憶遊戲")
 
     st.markdown(
         f"""
     <div class="instruction-card">
-        <p style="font-size: clamp(18px, 2.8vh, 30px) !important; margin: 0;"><b>{inst_free}</b></p>
+        <p>{inst_free}</p>
     </div>
     """,
         unsafe_allow_html=True,
     )
 
-    col_mic, col_input = st.columns([1.2, 2.0])
+    render_instruction_speaker_component(inst_free, "free_recall_inst")
 
-    with col_mic:
-        render_mic_component("delayed_free", continuous_mode=True)
+    render_mic_component("delayed_free", continuous_mode=True)
 
-    with col_input:
-        with st.form(key="form_delayed_free"):
-            user_answer = st.text_input("講出記得的詞語：", key="input_delayed_free")
-            if st.form_submit_button("👉 完成 (Finish)"):
-                elapsed = round(time.time() - st.session_state.item_start_time, 2)
-                recalled = []
-                score = 0
+    with st.form(key="form_delayed_free"):
+        user_answer = st.text_input("講出記得的詞語：", key="input_delayed_free")
+        if st.form_submit_button("👉 完成 (Finish)"):
+            elapsed = round(time.time() - st.session_state.item_start_time, 2)
+            recalled = []
+            score = 0
 
-                for item in MEMORY_ITEMS:
-                    if item["name"] in user_answer:
-                        recalled.append(item["name"])
-                        score += 1
+            for item in MEMORY_ITEMS:
+                if item["name"] in user_answer:
+                    recalled.append(item["name"])
+                    score += 1
 
-                st.session_state.recalled_free_items = recalled
-                st.session_state.moca_memory_score = score
+            st.session_state.recalled_free_items = recalled
+            st.session_state.moca_memory_score = score
 
-                st.session_state.telemetry_logs.append({
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "task": "delayed_recall_free",
-                    "score_awarded": score,
-                    "recalled_items": recalled,
-                    "latency_seconds": elapsed,
-                })
+            st.session_state.telemetry_logs.append({
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "task": "delayed_recall_free",
+                "score_awarded": score,
+                "recalled_items": recalled,
+                "latency_seconds": elapsed,
+            })
 
-                missed = [item for item in MEMORY_ITEMS if item["name"] not in recalled]
-                st.session_state.missed_items = missed
-                st.session_state.cued_current_index = 0
-                st.session_state.cued_sub_step = "category"
+            missed = [item for item in MEMORY_ITEMS if item["name"] not in recalled]
+            st.session_state.missed_items = missed
+            st.session_state.cued_current_index = 0
+            st.session_state.cued_sub_step = "category"
 
-                if missed:
-                    st.session_state.stage = "delayed_recall_cued_step"
-                else:
-                    st.session_state.stage = "complete"
-                st.rerun()
+            if missed:
+                st.session_state.stage = "delayed_recall_cued_step"
+            else:
+                st.session_state.stage = "complete"
+            st.rerun()
 
 # --- STAGE 7: CUED RECALL ---
 elif st.session_state.stage == "delayed_recall_cued_step":
@@ -721,37 +684,26 @@ elif st.session_state.stage == "delayed_recall_cued_step":
 
     if st.session_state.cued_sub_step == "category":
         inst_cue = f"提示類別為：{item['category']}，請講出這個詞語。"
-        
-        col_title, col_speaker = st.columns([3, 1])
-        with col_title:
-            st.markdown(f"<h2 style='text-align:center;'>提示: 「{item['category']}」</h2>", unsafe_allow_html=True)
-        with col_speaker:
-            render_instruction_speaker_component(inst_cue, f"cue_inst_{item['id']}")
 
-        col_mic, col_input = st.columns([1.2, 2.0])
-        with col_mic:
-            render_mic_component(f"cue_cat_{item['id']}", continuous_mode=True)
+        st.subheader(f"提示: 「{item['category']}」")
+        render_instruction_speaker_component(inst_cue, f"cue_inst_{item['id']}")
+        render_mic_component(f"cue_cat_{item['id']}", continuous_mode=True)
 
-        with col_input:
-            with st.form(key=f"form_cat_{item['id']}"):
-                user_spoken = st.text_input("請講出這個詞語：", key=f"in_cat_{item['id']}")
-                if st.form_submit_button("👉 完成 (Finish)"):
-                    st.session_state.recalled_cued_items[item["name"]] = user_spoken.strip()
-                    if item["name"] in user_spoken:
-                        st.session_state.cued_current_index += 1
-                        st.session_state.cued_sub_step = "category"
-                    else:
-                        st.session_state.cued_sub_step = "choice"
-                    st.rerun()
+        with st.form(key=f"form_cat_{item['id']}"):
+            user_spoken = st.text_input("請講出這個詞語：", key=f"in_cat_{item['id']}")
+            if st.form_submit_button("👉 完成 (Finish)"):
+                st.session_state.recalled_cued_items[item["name"]] = user_spoken.strip()
+                if item["name"] in user_spoken:
+                    st.session_state.cued_current_index += 1
+                    st.session_state.cued_sub_step = "category"
+                else:
+                    st.session_state.cued_sub_step = "choice"
+                st.rerun()
 
     elif st.session_state.cued_sub_step == "choice":
         inst_choice = "請在以下選項中選擇正確的詞語。"
-        
-        col_title, col_speaker = st.columns([3, 1])
-        with col_title:
-            st.markdown("<h2>選擇題 (Multiple Choice)</h2>", unsafe_allow_html=True)
-        with col_speaker:
-            render_instruction_speaker_component(inst_choice, f"choice_inst_{item['id']}")
+
+        render_instruction_speaker_component(inst_choice, f"choice_inst_{item['id']}")
 
         with st.form(key=f"form_choice_{item['id']}"):
             selected_option = st.radio(
@@ -767,7 +719,6 @@ elif st.session_state.stage == "delayed_recall_cued_step":
 
 # --- STAGE 8: COMPLETE & CLINICAL REPORT ---
 elif st.session_state.stage == "complete":
-    st.markdown("<style>[data-testid='stMainBlockContainer'] { overflow-y: auto !important; }</style>", unsafe_allow_html=True)
     st.balloons()
     st.title("🎉 完成所有任務！感謝您的參與！")
 
