@@ -528,8 +528,8 @@ elif st.session_state.stage == "memory_reg_notice":
     st.markdown(
         """
     <div class="notice-card">
-        <h1 style="color:#D84315; font-size:80px; margin-bottom:15px;">請緊記這 5 個詞語！</h1>
-        <p style="font-size:80px; line-height:1.6;">
+        <h1 style="color:#D84315; font-size:110px !important; line-height:1.2 !important; margin-bottom:25px;">請緊記這 5 個詞語！</h1>
+        <p style="font-size:90px !important; line-height:1.5 !important;">
             <b>在整個測試完結時，會再問你那些詞語。</b>
         </p>
     </div>
@@ -556,19 +556,11 @@ elif st.session_state.stage == "naming":
 
     with st.form(key=f"naming_form_{index}"):
         user_answer = st.text_input("答案：", key=f"user_input_{index}")
-        col1, col2 = st.columns(2)
-        with col1:
-            submit_btn = st.form_submit_button("👉 提交答案 / 下一題")
-        with col2:
-            skip_btn = st.form_submit_button("⏭️ 跳過")
+        submit_btn = st.form_submit_button("👉 提交答案 / 下一題")
 
         if submit_btn:
-            evaluate_naming_answer(user_answer if user_answer.strip() else "未有說話")
-            advance_naming_item()
-            st.rerun()
-
-        if skip_btn:
-            evaluate_naming_answer("跳過")
+            recorded_answer = user_answer.strip() if user_answer.strip() else "跳過"
+            evaluate_naming_answer(recorded_answer)
             advance_naming_item()
             st.rerun()
 
