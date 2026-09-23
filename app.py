@@ -475,12 +475,12 @@ if st.session_state.stage == "intro":
 
 # --- STAGE 2: MEMORY REGISTRATION TRIAL 1 ---
 elif st.session_state.stage == "memory_reg_1":
-    st.title("🧠 記憶力挑戰 (第一次)")
+    st.title("🧠 記憶力挑戰")
     st.markdown(
         """
     <div class="instruction-card">
         <p style="font-size:24px;">這是一個記憶力遊戲，你將會聽到 5 個詞語，請你把它們<b>聽清楚及記住</b>：</p>
-        <p style="font-size:22px; color:#D32F2F;">⚠️ 提示：當詞語播放完畢時，請盡量說出你記得的，<b>次序並不重要。</b></p>
+        <p style="font-size:24px; color:#D32F2F;">當詞語播放完畢時，請盡量說出你記得的，<b>次序並不重要。</b></p>
     </div>
     """,
         unsafe_allow_html=True,
@@ -491,7 +491,7 @@ elif st.session_state.stage == "memory_reg_1":
     render_mic_component("reg_1", continuous_mode=True)
 
     with st.form(key="form_reg_1"):
-        user_answer = st.text_input("請講出剛才聽到的詞語（語音識別會自動記錄）：", key="input_reg_1")
+        user_answer = st.text_input("請講出剛才聽到的詞語：", key="input_reg_1")
         if st.form_submit_button("👉 完成 (Finish)"):
             spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
             st.session_state.reg_trial_1_items = spoken
@@ -500,7 +500,7 @@ elif st.session_state.stage == "memory_reg_1":
 
 # --- STAGE 3: MEMORY REGISTRATION TRIAL 2 ---
 elif st.session_state.stage == "memory_reg_2":
-    st.title("🧠 記憶力挑戰 (第二次)")
+    st.title("🧠 記憶力挑戰 2")
     st.markdown(
         """
     <div class="instruction-card">
@@ -515,8 +515,8 @@ elif st.session_state.stage == "memory_reg_2":
     render_mic_component("reg_2", continuous_mode=True)
 
     with st.form(key="form_reg_2"):
-        user_answer = st.text_input("請再次講出記得的詞語（語音識別會自動記錄）：", key="input_reg_2")
-        if st.form_submit_button("👉 繼續 (Next Step)"):
+        user_answer = st.text_input("請再次講出記得的詞語：", key="input_reg_2")
+        if st.form_submit_button("👉 完成 (Finish)"):
             spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
             st.session_state.reg_trial_2_items = spoken
             st.session_state.stage = "memory_reg_notice"
@@ -528,8 +528,8 @@ elif st.session_state.stage == "memory_reg_notice":
     st.markdown(
         """
     <div class="notice-card">
-        <h1 style="color:#D84315; font-size:38px; margin-bottom:15px;">請緊記這 5 個詞語！</h1>
-        <p style="font-size:26px; line-height:1.6;">
+        <h1 style="color:#D84315; font-size:50px; margin-bottom:15px;">請緊記這 5 個詞語！</h1>
+        <p style="font-size:50px; line-height:1.6;">
             <b>在整個測試完結時，會再問你那些詞語。</b>
         </p>
     </div>
@@ -555,7 +555,7 @@ elif st.session_state.stage == "naming":
     render_mic_component(f"naming_{index}", continuous_mode=False)
 
     with st.form(key=f"naming_form_{index}"):
-        user_answer = st.text_input("答案（語音識別結果會自動填入）：", key=f"user_input_{index}")
+        user_answer = st.text_input("答案：", key=f"user_input_{index}")
         col1, col2 = st.columns(2)
         with col1:
             submit_btn = st.form_submit_button("👉 提交答案 / 下一題")
@@ -588,8 +588,8 @@ elif st.session_state.stage == "delayed_recall_free":
     render_mic_component("delayed_free", continuous_mode=True)
 
     with st.form(key="form_delayed_free"):
-        user_answer = st.text_input("講出記得的詞語（語音識別會自動持續記錄）：", key="input_delayed_free")
-        if st.form_submit_button("👉 提交自由回憶答案"):
+        user_answer = st.text_input("講出記得的詞語：", key="input_delayed_free")
+        if st.form_submit_button("👉 完成 (Finish)"):
             elapsed = round(time.time() - st.session_state.item_start_time, 2)
             recalled = []
             score = 0
@@ -640,8 +640,8 @@ elif st.session_state.stage == "delayed_recall_cued_step":
         render_mic_component(f"cue_cat_{item['id']}", continuous_mode=True)
 
         with st.form(key=f"form_cat_{item['id']}"):
-            user_spoken = st.text_input("請講出這個詞語（語音識別自動記錄）：", key=f"in_cat_{item['id']}")
-            if st.form_submit_button("👉 提交提示答案"):
+            user_spoken = st.text_input("請講出這個詞語：", key=f"in_cat_{item['id']}")
+            if st.form_submit_button("👉 完成 (Finish)"):
                 st.session_state.recalled_cued_items[item["name"]] = user_spoken.strip()
 
                 # Check if correct in category prompt
@@ -656,7 +656,6 @@ elif st.session_state.stage == "delayed_recall_cued_step":
 
     # SUB-STEP 2: Multiple Choice (If Category Cue Failed)
     elif st.session_state.cued_sub_step == "choice":
-        st.subheader(f"提示: 關於「{item['category']}」")
 
         with st.form(key=f"form_choice_{item['id']}"):
             selected_option = st.radio(
