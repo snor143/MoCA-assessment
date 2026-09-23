@@ -49,9 +49,9 @@ html, body, [class*="css"], div, p, span, label {
     color: var(--text-primary) !important;
 }
 
-h1 { font-size: 50px !important; font-weight: bold !important; color: var(--text-primary) !important; }
-h2 { font-size: 40px !important; font-weight: bold !important; color: var(--text-primary) !important; }
-h3 { font-size: 30px !important; font-weight: bold !important; color: var(--text-primary) !important; }
+h1 { font-size: 38px !important; font-weight: bold !important; color: var(--text-primary) !important; }
+h2 { font-size: 30px !important; font-weight: bold !important; color: var(--text-primary) !important; }
+h3 { font-size: 26px !important; font-weight: bold !important; color: var(--text-primary) !important; }
 
 /* Streamlit Input & Radio Enhancements */
 .stTextInput > div > div > input {
@@ -153,7 +153,7 @@ MEMORY_ITEMS = [
 NAMING_ITEMS = [
     {
         "id": "item_1",
-        "tier": "High Familiarity",
+        "tier": "High Familiarity (Warmup)",
         "emoji": "🦋",
         "primary_name": "蝴蝶",
         "acceptable_synonyms": ["蝴蝶", "呢個係蝴蝶", "這是蝴蝶", "呢隻係蝴蝶"],
@@ -169,7 +169,7 @@ NAMING_ITEMS = [
     },
     {
         "id": "item_3",
-        "tier": "Low Familiarity",
+        "tier": "Low Familiarity (MoCA Rhino Equivalent)",
         "emoji": "🦥",
         "primary_name": "樹懶",
         "acceptable_synonyms": ["樹懶", "呢個係樹懶", "這是樹懶", "呢隻係樹懶"],
