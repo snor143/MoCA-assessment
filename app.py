@@ -109,7 +109,7 @@ h3 { font-size: 26px !important; font-weight: bold !important; color: var(--text
 
 /* Big Naming Emoji Styling */
 .big-naming-emoji {
-    font-size: 200px !important;
+    font-size: 150px !important;
     line-height: 1 !important;
     text-align: center;
     margin: 20px 0;
@@ -475,7 +475,7 @@ if st.session_state.stage == "intro":
 
 # --- STAGE 2: MEMORY REGISTRATION TRIAL 1 ---
 elif st.session_state.stage == "memory_reg_1":
-    st.title("🧠 記憶力挑戰")
+    st.title("🧠 記憶力遊戲")
     st.markdown(
         """
     <div class="instruction-card">
@@ -500,7 +500,7 @@ elif st.session_state.stage == "memory_reg_1":
 
 # --- STAGE 3: MEMORY REGISTRATION TRIAL 2 ---
 elif st.session_state.stage == "memory_reg_2":
-    st.title("🧠 記憶力挑戰 2")
+    st.title("🧠 記憶力遊戲 2")
     st.markdown(
         """
     <div class="instruction-card">
@@ -528,8 +528,8 @@ elif st.session_state.stage == "memory_reg_notice":
     st.markdown(
         """
     <div class="notice-card">
-        <h1 style="color:#D84315; font-size:50px; margin-bottom:15px;">請緊記這 5 個詞語！</h1>
-        <p style="font-size:50px; line-height:1.6;">
+        <h1 style="color:#D84315; font-size:80px; margin-bottom:15px;">請緊記這 5 個詞語！</h1>
+        <p style="font-size:80px; line-height:1.6;">
             <b>在整個測試完結時，會再問你那些詞語。</b>
         </p>
     </div>
@@ -574,11 +574,11 @@ elif st.session_state.stage == "naming":
 
 # --- STAGE 6: DELAYED RECALL (FREE RECALL) ---
 elif st.session_state.stage == "delayed_recall_free":
-    st.title("⏳ 延遲記憶挑戰")
+    st.title("⏳ 延遲記憶遊戲")
     st.markdown(
         """
     <div class="instruction-card">
-        <h2>最開始播放了一些詞語給你聽，請你記住它們。</h2>
+        <h2>最開始播放了一些詞語給你聽並請你記住它們。</h2>
         <p style="font-size:24px;"><b>現在請你講出你記得的那些詞語：</b></p>
     </div>
     """,
@@ -632,7 +632,7 @@ elif st.session_state.stage == "delayed_recall_cued_step":
         st.rerun()
 
     item = missed_list[curr_idx]
-    st.title("💡 延遲記憶挑戰 (提示)")
+    st.title("💡 延遲記憶遊戲 (提示)")
 
     # SUB-STEP 1: Category Cue (Voice Input)
     if st.session_state.cued_sub_step == "category":
