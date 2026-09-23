@@ -619,7 +619,7 @@ elif st.session_state.stage == "naming":
 
 # --- STAGE 6: DELAYED RECALL (FREE RECALL) ---
 elif st.session_state.stage == "delayed_recall_free":
-    inst_free = "最開始播放了一些詞語給你聽並請你記住它們。現在請你講出你記得的那些詞語："
+    inst_free = "最開始播放了一些詞語給你聽並請你記住它們，現在請你講出你記得的那些詞語："
 
     st.title("⏳ 延遲記憶遊戲")
 
@@ -738,7 +738,7 @@ elif st.session_state.stage == "complete":
         st.session_state.recalled_choice_items = {}
         st.rerun()
 
-    with st.expander("🩺 Occupational Therapist / Speech Telemetry Dashboard", expanded=True):
+    with st.expander("🩺 Occupational Therapist / Speech Telemetry Dashboard", expanded=False):
         st.subheader("MoCA Sub-score Summary")
         col1, col2, col3 = st.columns(3)
         with col1:
