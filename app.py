@@ -684,7 +684,7 @@ elif st.session_state.stage == "complete":
         st.session_state.recalled_choice_items = {}
         st.rerun()
 
-    with st.expander("🩺 Occupational Therapist / Speech Telemetry Dashboard", expanded=True):
+    with st.expander("🩺 Occupational Therapist / Speech Telemetry Dashboard", expanded=False):
         st.subheader("MoCA Sub-score Summary")
         col1, col2, col3 = st.columns(3)
         with col1:
