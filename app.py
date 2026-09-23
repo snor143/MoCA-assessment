@@ -1,3 +1,4 @@
+# Set up environment
 import html
 import time
 from datetime import datetime
@@ -14,12 +15,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Custom UI Styling (Clean Vertical Layout + High-Contrast Typography)
+# UI
 st.markdown(
     """
 <style>
 /* Base Typography and Theme Variable Overrides */
-:root {
+:root { /* light mode layout */
     --card-bg: #F0F7F4;
     --card-border: #2E7D32;
     --notice-bg: #FFF8E1;
@@ -30,7 +31,7 @@ st.markdown(
 }
 
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root { /* dark mode layout */
         --card-bg: #1E2D24;
         --card-border: #4CAF50;
         --notice-bg: #3E2723;
@@ -41,7 +42,7 @@ st.markdown(
     }
 }
 
-/* Clear Page Flow Headers */
+/* Adjust header parameters */
 h1 {
     font-size: 32px !important;
     font-weight: bold !important;
