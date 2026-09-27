@@ -620,7 +620,7 @@ elif st.session_state.stage == "memory_reg_notice":
 elif st.session_state.stage == "naming":
     index = st.session_state.current_item_index
     item = NAMING_ITEMS[index]
-    inst_naming = f"：{item['story']}，請問這是什麼？"
+    inst_naming = f"{item['story']}，請問這是什麼？"
 
     st.markdown(
         f"""
@@ -638,7 +638,14 @@ elif st.session_state.stage == "naming":
     # 2. Market Shelf Visual Display Container
     st.markdown(
         f"""
-        
+    <div class="market-shelf-card">
+        <span class="item-badge">難度: {item['tier']}</span><br>
+        <img src="{item['image_url']}" class="product-image" alt="Supermarket Item">
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
     render_mic_component(f"naming_{index}", continuous_mode=False)
 
     with st.form(key=f"naming_form_{index}"):
@@ -658,7 +665,7 @@ elif st.session_state.stage == "delayed_recall_free":
     st.markdown(
         """
     <div class="market-banner">
-        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">第三站：結帳</h1>
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">💵 第三站：結帳</h1>
     </div>
     """,
         unsafe_allow_html=True,
