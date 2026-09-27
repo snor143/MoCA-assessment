@@ -177,29 +177,29 @@ NAMING_ITEMS = [
     {
         "id": "item_1",
         "tier": "Warmup",
-        "image_url": "https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?q=80&w=600&auto=format&fit=crop",
+        "image_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTa95wEIgRD64bergbVn9BgZ_w-Ia6eshD8OhL3ezEV1w&s=10",
         "primary_name": "蝴蝶",
         "acceptable_synonyms": ["蝴蝶", "呢個係蝴蝶", "這是蝴蝶", "呢隻係蝴蝶"],
         "moca_weight": 1,
-        "story": "喺超市花園角發現咗一隻靚靚嘅昆蟲！",
+        "story": "頭先喺超市外面見到呢樣野：",
     },
     {
         "id": "item_2",
         "tier": "Moderate",
-        "image_url": "https://images.unsplash.com/photo-1545671913-b89ac1b4ac10?q=80&w=600&auto=format&fit=crop",
+        "image_url": "https://cdn.vectorstock.com/i/750p/77/18/a-whimsical-black-and-white-line-drawing-vector-62527718.avif",
         "primary_name": "八爪魚",
         "acceptable_synonyms": ["八爪魚", "呢個係八爪魚", "這是八爪魚", "呢隻係八爪魚", "章魚"],
         "moca_weight": 1,
-        "story": "嚟到海鮮檔，檔主展示咗剛剛新鮮到貨嘅海鮮：",
+        "story": "進入超市後，檔主展示咗呢樣野：",
     },
     {
         "id": "item_3",
         "tier": "Low",
-        "image_url": "https://images.unsplash.com/photo-1534567153574-2b12153a87f0?q=80&w=600&auto=format&fit=crop",
+        "image_url": "https://www.publicdomainpictures.net/pictures/190000/velka/sloth-drawing.jpg",
         "primary_name": "樹懶",
         "acceptable_synonyms": ["樹懶", "呢個係樹懶", "這是樹懶", "呢隻係樹懶"],
         "moca_weight": 1,
-        "story": "超市入口放咗一個好特別嘅動物吉祥物：",
+        "story": "貨架上有一張圖片：",
     },
 ]
 
@@ -522,7 +522,7 @@ if st.session_state.stage == "intro":
 
     render_staff_npc("早晨！歡迎光臨開心超市！今日超市有好多新鮮貨品，準備好帶你嘅購物籃出發未？", staff_type="manager")
 
-    if st.button("推購物車出發 (Start Shopping)"):
+    if st.button("出發 (Start Shopping)"):
         st.session_state.stage = "memory_reg_1"
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
@@ -532,12 +532,12 @@ if st.session_state.stage == "intro":
 
 # --- STAGE 2: SHOPPING LIST TRIAL 1 ---
 elif st.session_state.stage == "memory_reg_1":
-    inst_1 = "請聽清楚超市廣播為你準備的 5 樣購物清單物品，聽完後講出你記得的物品。"
+    inst_1 = "請聽清楚超市廣播的 5 個詞語，聽完後講出你記得的。"
 
     st.markdown(
         """
     <div class="market-banner">
-        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">📝 第一站：準備購物清單 (1/2)</h1>
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">📝 第一站：觀察四周事物 (1/2)</h1>
     </div>
     """,
         unsafe_allow_html=True,
@@ -555,7 +555,7 @@ elif st.session_state.stage == "memory_reg_1":
         render_mic_component("reg_1", continuous_mode=True)
 
     with st.form(key="form_reg_1"):
-        user_answer = st.text_input("放入購物籃的物品：", key="input_reg_1")
+        user_answer = st.text_input("記得的詞語：", key="input_reg_1")
         if st.form_submit_button("👉 記好了，下一步"):
             spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
             st.session_state.reg_trial_1_items = spoken
@@ -564,12 +564,12 @@ elif st.session_state.stage == "memory_reg_1":
 
 # --- STAGE 3: SHOPPING LIST TRIAL 2 ---
 elif st.session_state.stage == "memory_reg_2":
-    inst_2 = "超市廣播會再播一次購物清單，請再次講出記得的物品（包括剛才講過的）。"
+    inst_2 = "超市廣播會再播一次，請再次講出記得的物品（包括剛才講過的）。"
 
     st.markdown(
         """
     <div class="market-banner">
-        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">📝 第一站：確認購物清單 (2/2)</h1>
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">📝 第一站：觀察四周事物 (2/2)</h1>
     </div>
     """,
         unsafe_allow_html=True,
@@ -587,7 +587,7 @@ elif st.session_state.stage == "memory_reg_2":
         render_mic_component("reg_2", continuous_mode=True)
 
     with st.form(key="form_reg_2"):
-        user_answer = st.text_input("放入購物籃的物品：", key="input_reg_2")
+        user_answer = st.text_input("記得的詞語：", key="input_reg_2")
         if st.form_submit_button("👉 記好了，進入超市"):
             spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
             st.session_state.reg_trial_2_items = spoken
@@ -596,7 +596,7 @@ elif st.session_state.stage == "memory_reg_2":
 
 # --- STAGE 4: SHOPPING MEMO NOTICE PAGE ---
 elif st.session_state.stage == "memory_reg_notice":
-    inst_notice = "請緊記這 5 樣購物清單物品！當我們逛完超市去結帳時，需要再講出這份清單。"
+    inst_notice = "請緊記這 5 樣東西！當我們逛完超市去結帳時，需要再講出這些詞語。"
 
     st.markdown(
         """
@@ -607,7 +607,7 @@ elif st.session_state.stage == "memory_reg_notice":
         unsafe_allow_html=True,
     )
 
-    render_staff_npc("請緊記剛才這 5 樣物品！稍後去到【自動結帳機】時，需要你講出清單上的所有物品喔！", staff_type="manager")
+    render_staff_npc("請緊記剛才這 5 樣東西！稍後去結帳時，需要重覆講出廣播提到的字！", staff_type="manager")
     render_instruction_speaker_component(inst_notice, "notice_inst")
 
     if st.button("👉 明白，開始逛超市！"):
@@ -620,12 +620,12 @@ elif st.session_state.stage == "memory_reg_notice":
 elif st.session_state.stage == "naming":
     index = st.session_state.current_item_index
     item = NAMING_ITEMS[index]
-    inst_naming = f"請大聲講出：{item['story']}這是什麼？"
+    inst_naming = f"：{item['story']}，請問這是什麼？"
 
     st.markdown(
         f"""
     <div class="market-banner">
-        <h1 style="margin:0; font-size:28px; color:#FFFFFF !important;">🔍 第二站：超市貨架探索 ({index+1}/{len(NAMING_ITEMS)})</h1>
+        <h1 style="margin:0; font-size:28px; color:#FFFFFF !important;">🔍 第二站：探索超市 ({index+1}/{len(NAMING_ITEMS)})</h1>
     </div>
     """,
         unsafe_allow_html=True,
@@ -638,19 +638,12 @@ elif st.session_state.stage == "naming":
     # 2. Market Shelf Visual Display Container
     st.markdown(
         f"""
-    <div class="market-shelf-card">
-        <span class="item-badge">超市貨架 A{index+1} 區</span><br>
-        <img src="{item['image_url']}" class="product-image" alt="Supermarket Item">
-    </div>
-    """,
-        unsafe_allow_html=True,
-    )
-
+        
     render_mic_component(f"naming_{index}", continuous_mode=False)
 
     with st.form(key=f"naming_form_{index}"):
-        user_answer = st.text_input("這物品是：", key=f"user_input_{index}")
-        submit_btn = st.form_submit_button("👉 放入購物車 / 下一格貨架")
+        user_answer = st.text_input("這是...", key=f"user_input_{index}")
+        submit_btn = st.form_submit_button("👉 下一步")
 
         if submit_btn:
             recorded_answer = user_answer.strip() if user_answer.strip() else "跳過"
@@ -660,25 +653,25 @@ elif st.session_state.stage == "naming":
 
 # --- STAGE 6: CHECKOUT COUNTER (FREE RECALL) ---
 elif st.session_state.stage == "delayed_recall_free":
-    inst_free = "歡迎來到自動結帳機！請講出你剛才準備的 5 樣購物清單物品："
+    inst_free = "歡迎來到結帳！請講出你剛才廣播的 5 樣東西："
 
     st.markdown(
         """
     <div class="market-banner">
-        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">💳 第三站：超市自動結帳</h1>
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">💳 第三站：結帳</h1>
     </div>
     """,
         unsafe_allow_html=True,
     )
 
-    render_staff_npc("歡迎來到結帳處！請講出最開始請你記住的 5 樣購物清單物品，以便進行核對：", staff_type="cashier", staff_name="收銀員阿輝")
+    render_staff_npc("歡迎來到結帳處！請講出最開始請你記住的 5 樣東西，以便進行核對：", staff_type="cashier", staff_name="收銀員阿輝")
     render_instruction_speaker_component(inst_free, "free_recall_inst")
 
     render_mic_component("delayed_free", continuous_mode=True)
 
     with st.form(key="form_delayed_free"):
-        user_answer = st.text_input("講出清單物品：", key="input_delayed_free")
-        if st.form_submit_button("👉 掃瞄完成 (Scan Items)"):
+        user_answer = st.text_input("講出詞語：", key="input_delayed_free")
+        if st.form_submit_button("👉 完成 (Done)"):
             elapsed = round(time.time() - st.session_state.item_start_time, 2)
             recalled = []
             score = 0
@@ -733,15 +726,15 @@ elif st.session_state.stage == "delayed_recall_cued_step":
     )
 
     if st.session_state.cued_sub_step == "category":
-        inst_cue = f"店員提示：物品類別是【{item['category']}】，請問這是什麼物品？"
+        inst_cue = f"類別是【{item['category']}】，請問這是什麼？"
 
-        render_staff_npc(f"讓我幫幫你！呢樣物品屬於【{item['category']}】，請問你記不記得係咩？", staff_type="assistant", staff_name="店員小花")
+        render_staff_npc(f"讓我幫幫你！呢樣物品屬於【{item['category']}】，請問你記得是什麼嗎？", staff_type="assistant", staff_name="店員小花")
         render_instruction_speaker_component(inst_cue, f"cue_inst_{item['id']}")
         render_mic_component(f"cue_cat_{item['id']}", continuous_mode=True)
 
         with st.form(key=f"form_cat_{item['id']}"):
-            user_spoken = st.text_input("請講出這個物品：", key=f"in_cat_{item['id']}")
-            if st.form_submit_button("👉 確認物品"):
+            user_spoken = st.text_input("請講出這樣東西：", key=f"in_cat_{item['id']}")
+            if st.form_submit_button("👉 確認"):
                 st.session_state.recalled_cued_items[item["name"]] = user_spoken.strip()
                 if item["name"] in user_spoken:
                     st.session_state.cued_current_index += 1
@@ -751,18 +744,18 @@ elif st.session_state.stage == "delayed_recall_cued_step":
                 st.rerun()
 
     elif st.session_state.cued_sub_step == "choice":
-        inst_choice = "店員拿出了三個物品，請選擇原本清單上的那一個。"
+        inst_choice = "店員列出了三個選項，請選擇原本廣播的那一個。"
 
-        render_staff_npc("我喺貨架搵到 3 樣物品，請點選邊樣先係原本購物清單上面嘅：", staff_type="assistant", staff_name="店員小花")
+        render_staff_npc("我記得三個選項，邊樣先係廣播講嘅：", staff_type="assistant", staff_name="店員小花")
         render_instruction_speaker_component(inst_choice, f"choice_inst_{item['id']}")
 
         with st.form(key=f"form_choice_{item['id']}"):
             selected_option = st.radio(
-                "請點選正確物品：",
+                "請點選正確選項：",
                 options=item["options"],
                 key=f"radio_choice_{item['id']}",
             )
-            if st.form_submit_button("👉 放入購物車並繼續"):
+            if st.form_submit_button("👉 繼續"):
                 st.session_state.recalled_choice_items[item["name"]] = selected_option
                 st.session_state.cued_current_index += 1
                 st.session_state.cued_sub_step = "category"
