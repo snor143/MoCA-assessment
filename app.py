@@ -658,7 +658,7 @@ elif st.session_state.stage == "delayed_recall_free":
     st.markdown(
         """
     <div class="market-banner">
-        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">💵 第三站：結帳</h1>
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">第三站：結帳</h1>
     </div>
     """,
         unsafe_allow_html=True,
