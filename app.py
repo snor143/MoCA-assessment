@@ -276,8 +276,8 @@ def render_audio_speaker_component(words_list, key_suffix):
     button:hover {{ background:#002171; }}
     .status {{ font-size:15px; margin-top:6px; font-weight:bold; color:#0D47A1; }}
     </style></head><body>
-    <button id="speak_btn_{key_suffix}" type="button">📢 聽超市廣播購物清單</button>
-    <div class="status" id="status_{key_suffix}">點擊收聽清單</div>
+    <button id="speak_btn_{key_suffix}" type="button">📢 聽超市廣播</button>
+    <div class="status" id="status_{key_suffix}">點擊收聽</div>
 
     <script>
     const words = {words_js_array};
