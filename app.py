@@ -306,11 +306,11 @@ def render_audio_speaker_component(words_list, key_suffix):
 
       function speakNext() {{
         if (index >= words.length) {{
-          status.textContent = '✅ 清單廣播完畢';
+          status.textContent = '✅ 廣播完畢';
           isPlaying = false;
           btn.disabled = false;
           btn.style.background = '#0D47A1';
-          btn.textContent = '🔄 重播購物清單 (Replay)';
+          btn.textContent = '🔄 重播 (Replay)';
           return;
         }}
 
@@ -326,11 +326,11 @@ def render_audio_speaker_component(words_list, key_suffix):
           index++;
           if (index < words.length) setTimeout(speakNext, 1000);
           else {{
-            status.textContent = '✅ 清單廣播完畢';
+            status.textContent = '✅ 廣播完畢';
             isPlaying = false;
             btn.disabled = false;
             btn.style.background = '#0D47A1';
-            btn.textContent = '🔄 重播購物清單 (Replay)';
+            btn.textContent = '🔄 重播 (Replay)';
           }}
         }};
 
