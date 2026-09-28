@@ -181,7 +181,7 @@ NAMING_ITEMS = [
         "primary_name": "蝴蝶",
         "acceptable_synonyms": ["蝴蝶", "呢個係蝴蝶", "這是蝴蝶", "呢隻係蝴蝶"],
         "moca_weight": 1,
-        "story": "剛剛在超市外面看到這東西：",
+        "story": "剛剛在超市外面看到這東西",
     },
     {
         "id": "item_2",
@@ -190,7 +190,7 @@ NAMING_ITEMS = [
         "primary_name": "八爪魚",
         "acceptable_synonyms": ["八爪魚", "呢個係八爪魚", "這是八爪魚", "呢隻係八爪魚", "章魚"],
         "moca_weight": 1,
-        "story": "進入超市後，檔主向你展示了這樣東西：",
+        "story": "進入超市後，檔主向你展示了這樣東西",
     },
     {
         "id": "item_3",
@@ -199,7 +199,7 @@ NAMING_ITEMS = [
         "primary_name": "樹懶",
         "acceptable_synonyms": ["樹懶", "呢個係樹懶", "這是樹懶", "呢隻係樹懶"],
         "moca_weight": 1,
-        "story": "貨架上有一張圖片：",
+        "story": "貨架上有一張圖片",
     },
 ]
 
@@ -632,7 +632,7 @@ elif st.session_state.stage == "naming":
     )
 
     # 1. Store Staff Speaks to Patient via Avatar & Speech Bubble
-    render_staff_npc(f"{item['story']}你知道佢叫咩名嗎？", staff_type="assistant", staff_name="店員小花")
+    render_staff_npc(f"{item['story']}，請問這是什麼？", staff_type="assistant", staff_name="店員小花")
     render_instruction_speaker_component(inst_naming, f"naming_{index}_inst")
 
     # 2. Market Shelf Visual Display Container
