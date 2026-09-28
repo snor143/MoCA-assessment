@@ -181,7 +181,7 @@ NAMING_ITEMS = [
         "primary_name": "蝴蝶",
         "acceptable_synonyms": ["蝴蝶", "呢個係蝴蝶", "這是蝴蝶", "呢隻係蝴蝶"],
         "moca_weight": 1,
-        "story": "頭先喺超市外面見到呢樣野：",
+        "story": "剛剛在超市外面看到這東西：",
     },
     {
         "id": "item_2",
@@ -190,7 +190,7 @@ NAMING_ITEMS = [
         "primary_name": "八爪魚",
         "acceptable_synonyms": ["八爪魚", "呢個係八爪魚", "這是八爪魚", "呢隻係八爪魚", "章魚"],
         "moca_weight": 1,
-        "story": "進入超市後，檔主展示咗呢樣野：",
+        "story": "進入超市後，檔主向你展示了這樣東西：",
     },
     {
         "id": "item_3",
@@ -564,7 +564,7 @@ elif st.session_state.stage == "memory_reg_1":
 
 # --- STAGE 3: SHOPPING LIST TRIAL 2 ---
 elif st.session_state.stage == "memory_reg_2":
-    inst_2 = "超市廣播會再播一次，請再次講出記得的物品（包括剛才講過的）。"
+    inst_2 = "超市廣播會再播一次，請再次講出記得的東西（包括剛才講過的）。"
 
     st.markdown(
         """
@@ -596,7 +596,7 @@ elif st.session_state.stage == "memory_reg_2":
 
 # --- STAGE 4: SHOPPING MEMO NOTICE PAGE ---
 elif st.session_state.stage == "memory_reg_notice":
-    inst_notice = "請緊記這 5 樣東西！當我們逛完超市去結帳時，需要再講出這些詞語。"
+    inst_notice = "請緊記剛才這 5 樣東西！稍後去結帳時，需要重覆講出廣播提到的字！"
 
     st.markdown(
         """
@@ -639,7 +639,6 @@ elif st.session_state.stage == "naming":
     st.markdown(
         f"""
     <div class="market-shelf-card">
-        <span class="item-badge">難度: {item['tier']}</span><br>
         <img src="{item['image_url']}" class="product-image" alt="Supermarket Item">
     </div>
     """,
@@ -660,7 +659,7 @@ elif st.session_state.stage == "naming":
 
 # --- STAGE 6: CHECKOUT COUNTER (FREE RECALL) ---
 elif st.session_state.stage == "delayed_recall_free":
-    inst_free = "歡迎來到結帳！請講出你剛才廣播的 5 樣東西："
+    inst_free = "歡迎來到結帳處！請講出最開始廣播的 5 樣東西"
 
     st.markdown(
         """
@@ -671,7 +670,7 @@ elif st.session_state.stage == "delayed_recall_free":
         unsafe_allow_html=True,
     )
 
-    render_staff_npc("歡迎來到結帳處！請講出最開始請你記住的 5 樣東西，以便進行核對：", staff_type="cashier", staff_name="收銀員阿輝")
+    render_staff_npc("歡迎來到結帳處！請講出最開始廣播的 5 樣東西", staff_type="cashier", staff_name="收銀員阿輝")
     render_instruction_speaker_component(inst_free, "free_recall_inst")
 
     render_mic_component("delayed_free", continuous_mode=True)
@@ -726,16 +725,16 @@ elif st.session_state.stage == "delayed_recall_cued_step":
     st.markdown(
         """
     <div class="market-banner" style="background: linear-gradient(135deg, #0288D1 0%, #01579B 100%);">
-        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">🔎 超市店員尋物協助</h1>
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">🔎 超市店員的協助</h1>
     </div>
     """,
         unsafe_allow_html=True,
     )
 
     if st.session_state.cued_sub_step == "category":
-        inst_cue = f"類別是【{item['category']}】，請問這是什麼？"
+        inst_cue = f"讓我幫幫你！這東西屬於【{item['category']}】，請問你記得是什麼嗎？"
 
-        render_staff_npc(f"讓我幫幫你！呢樣物品屬於【{item['category']}】，請問你記得是什麼嗎？", staff_type="assistant", staff_name="店員小花")
+        render_staff_npc(f"讓我幫幫你！這東西屬於【{item['category']}】，請問你記得是什麼嗎？", staff_type="assistant", staff_name="店員小花")
         render_instruction_speaker_component(inst_cue, f"cue_inst_{item['id']}")
         render_mic_component(f"cue_cat_{item['id']}", continuous_mode=True)
 
@@ -751,9 +750,9 @@ elif st.session_state.stage == "delayed_recall_cued_step":
                 st.rerun()
 
     elif st.session_state.cued_sub_step == "choice":
-        inst_choice = "店員列出了三個選項，請選擇原本廣播的那一個。"
+        inst_choice = "這裏有三個選項，請選擇原本廣播的那一個。"
 
-        render_staff_npc("我記得三個選項，邊樣先係廣播講嘅：", staff_type="assistant", staff_name="店員小花")
+        render_staff_npc("這裏有三個選項，請選擇原本廣播的那一個。", staff_type="assistant", staff_name="店員小花")
         render_instruction_speaker_component(inst_choice, f"choice_inst_{item['id']}")
 
         with st.form(key=f"form_choice_{item['id']}"):
@@ -782,9 +781,9 @@ elif st.session_state.stage == "complete":
         unsafe_allow_html=True,
     )
 
-    render_staff_npc("恭喜你！買齊晒所有嘢啦，歡迎下次再嚟開心超市購物！", staff_type="manager")
+    render_staff_npc("恭喜你！買齊所有東西了，歡迎下次再來開心超市購物！", staff_type="manager")
 
-    if st.button("🔄 再玩一次超市遊戲 (Play Again)"):
+    if st.button("🔄 再玩一次 (Play Again)"):
         st.session_state.stage = "intro"
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
