@@ -520,7 +520,7 @@ if st.session_state.stage == "intro":
         unsafe_allow_html=True,
     )
 
-    render_staff_npc("早晨！歡迎光臨開心超市！今日超市有好多新鮮貨品，準備好你的購物籃出發吧！＂, staff_type="manager")
+    render_staff_npc("早晨！歡迎光臨開心超市！今日超市有好多新鮮貨品，準備好你的購物籃出發吧！", staff_type="manager")
 
     if st.button("出發 (Start Shopping)"):
         st.session_state.stage = "memory_reg_1"
