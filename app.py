@@ -639,13 +639,16 @@ function makeConnection(from, to, startTime) {
     const isOrderCorrect = JSON.stringify(seq) === JSON.stringify(CORRECT_SEQUENCE);
     const hasCrossing = state.connections.some(c => c.crosses);
     const isCorrect = isOrderCorrect && !hasCrossing;
+    const duration = (performance.now() - state.startTime) / 1000;
 
     const resultData = {
       is_correct: isCorrect,
+      score: isCorrect ? 1 : 0,
       sequence: seq,
       undo_count: state.undoCount,
       has_crossing: hasCrossing,
       is_order_correct: isOrderCorrect,
+      completion_time_sec: roundToTwo(duration)
     };
 
     console.log("=== 遊戲結果 ===");
@@ -653,6 +656,10 @@ function makeConnection(from, to, startTime) {
 
     injectValueIntoStreamlitWidget(JSON.stringify(resultData));
   }
+}
+
+function roundToTwo(num) {
+    return +(Math.round(num + "e+2")  + "e-2");
 }
 
 function undo() {
@@ -842,6 +849,7 @@ for key, value in {
     "current_item_index": 0,
     "telemetry_logs": [],
     "item_start_time": None,
+    "moca_visuospatial_score": 0,
     "moca_naming_score": 0,
     "moca_memory_score": 0,
     "reg_trial_1_items": [],
@@ -1179,9 +1187,11 @@ def evaluate_naming_answer(answer):
             "task": "naming",
             "item_id": item["id"],
             "target_name": item["primary_name"],
-            "user_spoken_raw": answer,
+            "user_response": answer,
             "is_correct": correct,
+            "score_awarded": item["moca_weight"] if correct else 0,
             "latency_seconds": elapsed,
+            "notes": f"Tier: {item['tier']}",
         }
     )
     return correct
@@ -1241,9 +1251,27 @@ elif st.session_state.stage == "game1":
     components.html(GAME1_HTML, height=620, scrolling=False)
 
     if st.button("➡️ 去下一關"):
+        if st.session_state.game1_result:
+            res = st.session_state.game1_result
+            if isinstance(res, dict):
+                score = 1 if res.get("is_correct", False) else 0
+                st.session_state.moca_visuospatial_score = score
+                st.session_state.telemetry_logs.append(
+                    {
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "task": "visuospatial_exec_trail",
+                        "item_id": "game1_trail_making",
+                        "target_name": "Alternate Trail (1d-10b-2d-20b-5d-50b-10d-100b)",
+                        "user_response": " -> ".join(res.get("sequence", [])),
+                        "is_correct": res.get("is_correct", False),
+                        "score_awarded": score,
+                        "latency_seconds": res.get("completion_time_sec", 0.0),
+                        "notes": f"Undo Count: {res.get('undo_count', 0)}, Crossing: {res.get('has_crossing', False)}, Order Correct: {res.get('is_order_correct', False)}",
+                    }
+                )
+
         st.session_state.stage = "memory_reg_1"
         st.session_state.current_item_index = 0
-        st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
         st.session_state.moca_memory_score = 0
         st.rerun()
@@ -1277,6 +1305,21 @@ elif st.session_state.stage == "memory_reg_1":
         if st.form_submit_button("👉 記好了，下一步"):
             spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
             st.session_state.reg_trial_1_items = spoken
+
+            st.session_state.telemetry_logs.append(
+                {
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "task": "memory_registration_trial_1",
+                    "item_id": "memory_reg_1",
+                    "target_name": ", ".join(word_names),
+                    "user_response": user_answer,
+                    "is_correct": None,
+                    "score_awarded": 0,
+                    "latency_seconds": 0.0,
+                    "notes": f"Spoken Items Count: {len(spoken)}",
+                }
+            )
+
             st.session_state.stage = "memory_reg_2"
             st.rerun()
 
@@ -1309,6 +1352,21 @@ elif st.session_state.stage == "memory_reg_2":
         if st.form_submit_button("👉 記好了，進入超市"):
             spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
             st.session_state.reg_trial_2_items = spoken
+
+            st.session_state.telemetry_logs.append(
+                {
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "task": "memory_registration_trial_2",
+                    "item_id": "memory_reg_2",
+                    "target_name": ", ".join(word_names),
+                    "user_response": user_answer,
+                    "is_correct": None,
+                    "score_awarded": 0,
+                    "latency_seconds": 0.0,
+                    "notes": f"Spoken Items Count: {len(spoken)}",
+                }
+            )
+
             st.session_state.stage = "memory_reg_notice"
             st.rerun()
 
@@ -1406,13 +1464,18 @@ elif st.session_state.stage == "delayed_recall_free":
             st.session_state.recalled_free_items = recalled
             st.session_state.moca_memory_score = score
 
+            word_names = [item["name"] for item in MEMORY_ITEMS]
             st.session_state.telemetry_logs.append(
                 {
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "task": "delayed_recall_free",
+                    "item_id": "delayed_free",
+                    "target_name": ", ".join(word_names),
+                    "user_response": user_answer,
+                    "is_correct": score == 5,
                     "score_awarded": score,
-                    "recalled_items": recalled,
                     "latency_seconds": elapsed,
+                    "notes": f"Recalled Items: {', '.join(recalled) if recalled else 'None'}",
                 }
             )
 
@@ -1458,7 +1521,23 @@ elif st.session_state.stage == "delayed_recall_cued_step":
             user_spoken = st.text_input("請講出這樣東西：", key=f"in_cat_{item['id']}")
             if st.form_submit_button("👉 確認"):
                 st.session_state.recalled_cued_items[item["name"]] = user_spoken.strip()
-                if item["name"] in user_spoken:
+                is_correct = item["name"] in user_spoken
+
+                st.session_state.telemetry_logs.append(
+                    {
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "task": "delayed_recall_category_cue",
+                        "item_id": item["id"],
+                        "target_name": item["name"],
+                        "user_response": user_spoken,
+                        "is_correct": is_correct,
+                        "score_awarded": 0,  # MoCA guidelines: Cued recall does not yield points for total MoCA
+                        "latency_seconds": 0.0,
+                        "notes": f"Category Cue Provided: {item['category']}",
+                    }
+                )
+
+                if is_correct:
                     st.session_state.cued_current_index += 1
                     st.session_state.cued_sub_step = "category"
                 else:
@@ -1479,6 +1558,22 @@ elif st.session_state.stage == "delayed_recall_cued_step":
             )
             if st.form_submit_button("👉 繼續"):
                 st.session_state.recalled_choice_items[item["name"]] = selected_option
+                is_correct = selected_option == item["name"]
+
+                st.session_state.telemetry_logs.append(
+                    {
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "task": "delayed_recall_multiple_choice",
+                        "item_id": item["id"],
+                        "target_name": item["name"],
+                        "user_response": selected_option,
+                        "is_correct": is_correct,
+                        "score_awarded": 0,  # MoCA guidelines: Multiple choice does not yield points for total MoCA
+                        "latency_seconds": 0.0,
+                        "notes": f"Options: {', '.join(item['options'])}",
+                    }
+                )
+
                 st.session_state.cued_current_index += 1
                 st.session_state.cued_sub_step = "category"
                 st.rerun()
@@ -1504,6 +1599,7 @@ elif st.session_state.stage == "complete":
         st.session_state.game1_result = None
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
+        st.session_state.moca_visuospatial_score = 0
         st.session_state.moca_naming_score = 0
         st.session_state.moca_memory_score = 0
         st.session_state.reg_trial_1_items = []
@@ -1522,14 +1618,20 @@ elif st.session_state.stage == "complete":
         st.write(st.session_state.game1_result if st.session_state.game1_result else "No result recorded.")
 
         st.subheader("MoCA Sub-score Summary")
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("1. Naming Sub-score", f"{st.session_state.moca_naming_score} / 3 Points")
+            st.metric("1. Visuospatial / Exec", f"{st.session_state.moca_visuospatial_score} / 1 Point")
         with col2:
-            st.metric("2. Delayed Recall (Free)", f"{st.session_state.moca_memory_score} / 5 Points")
+            st.metric("2. Naming Sub-score", f"{st.session_state.moca_naming_score} / 3 Points")
         with col3:
-            total = st.session_state.moca_naming_score + st.session_state.moca_memory_score
-            st.metric("Combined MoCA Sub-total", f"{total} / 8 Points")
+            st.metric("3. Delayed Recall (Free)", f"{st.session_state.moca_memory_score} / 5 Points")
+        with col4:
+            total = (
+                st.session_state.moca_visuospatial_score
+                + st.session_state.moca_naming_score
+                + st.session_state.moca_memory_score
+            )
+            st.metric("Combined MoCA Total", f"{total} / 9 Points")
 
         st.subheader("Memory Breakdown")
         st.write(
@@ -1551,12 +1653,13 @@ elif st.session_state.stage == "complete":
                 }
             )
 
+        st.subheader("Complete Clinical Telemetry Log")
         df = pd.DataFrame(st.session_state.telemetry_logs)
         st.dataframe(df)
         if not df.empty:
             st.download_button(
                 "📥 Download Clinical Telemetry Log (.CSV)",
-                df.to_csv(index=False).encode("utf-8"),
+                df.to_csv(index=False).encode("utf-8-sig"),
                 f"moca_cantonese_speech_telemetry_{int(time.time())}.csv",
                 "text/csv",
             )
