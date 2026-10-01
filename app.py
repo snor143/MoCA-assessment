@@ -6,6 +6,13 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
+# Try importing canvas for drawing tasks; fallback gracefully if not installed
+try:
+    from streamlit_drawable_canvas import st_canvas
+    CANVAS_AVAILABLE = True
+except ImportError:
+    CANVAS_AVAILABLE = False
+
 # Page configuration
 st.set_page_config(
     page_title="超級市場大搜查 (Supermarket Shopping Adventure)",
@@ -14,11 +21,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# --- METHOD 1: VISUAL CSS & SUPERMARKET IMMERSION STYLING ---
+# --- VISUAL CSS & SUPERMARKET IMMERSION STYLING ---
 st.markdown(
     """
 <style>
-/* Full Supermarket Store Background Image with Blur Overlay */
 .stApp {
     background: linear-gradient(rgba(245, 247, 248, 0.88), rgba(245, 247, 248, 0.88)),
                 url('https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=1600&auto=format&fit=crop');
@@ -27,7 +33,6 @@ st.markdown(
     background-attachment: fixed;
 }
 
-/* Supermarket Banner Style */
 .market-banner {
     background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%);
     color: #FFFFFF !important;
@@ -38,7 +43,6 @@ st.markdown(
     margin-bottom: 20px;
 }
 
-/* NPC Staff & Speech Bubble Layout */
 .npc-container {
     display: flex;
     align-items: flex-end;
@@ -84,7 +88,6 @@ st.markdown(
     width: 0;
 }
 
-/* Supermarket Shelf / Display Card */
 .market-shelf-card {
     background: rgba(255, 255, 255, 0.95);
     border: 2px solid #81C784;
@@ -105,18 +108,6 @@ st.markdown(
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
-.item-badge {
-    display: inline-block;
-    background: #FF9800;
-    color: #FFFFFF;
-    font-weight: bold;
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 18px;
-    margin-bottom: 10px;
-}
-
-/* Input & Button Customization */
 .stTextInput > div > div > input {
     font-size: 22px !important;
     height: 58px !important;
@@ -144,14 +135,22 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Initialize Session State
+# Initialize Session State Variables
 for key, value in {
     "stage": "intro",
     "current_item_index": 0,
     "telemetry_logs": [],
     "item_start_time": None,
+    # --- MoCA Subscores ---
+    "moca_drawing_trail": 0,
+    "moca_drawing_cube": 0,
+    "moca_drawing_clock": 0,
     "moca_naming_score": 0,
     "moca_memory_score": 0,
+    "moca_language_repeat": 0,
+    "moca_language_fluency": 0,
+    "moca_abstraction": 0,
+    # --- Shopping Game State ---
     "reg_trial_1_items": [],
     "reg_trial_2_items": [],
     "recalled_free_items": [],
@@ -203,10 +202,19 @@ NAMING_ITEMS = [
     },
 ]
 
-# --- UI COMPONENT FUNCTIONS ---
+LANGUAGE_REPEAT_SENTENCES = [
+    {"id": "sent_1", "text": "我隻知道黃總今天需要幫助", "key_terms": ["黃總", "今天", "幫助"]},
+    {"id": "sent_2", "text": "當狗進房間時貓總是躲在桌子下面", "key_terms": ["狗", "房間", "貓", "桌子下面"]},
+]
+
+ABSTRACTION_PAIRS = [
+    {"id": "abs_1", "pair": "香蕉 – 桔子", "answer": "水果", "synonyms": ["水果", "果實", "食物"]},
+    {"id": "abs_2", "pair": "火車 – 腳踏車", "answer": "交通工具", "synonyms": ["交通工具", "車", "工具"]},
+]
+
+# --- UI HELPER FUNCTIONS ---
 
 def render_staff_npc(dialogue_text, staff_type="manager", staff_name="店長阿Ming"):
-    """Renders the Store Staff NPC avatar alongside a retro speech bubble."""
     avatar_urls = {
         "manager": "https://cdn-icons-png.flaticon.com/512/4140/4140047.png",
         "cashier": "https://cdn-icons-png.flaticon.com/512/3052/3052217.png",
@@ -228,7 +236,6 @@ def render_staff_npc(dialogue_text, staff_type="manager", staff_name="店長阿M
 
 
 def render_instruction_speaker_component(instruction_text, key_suffix):
-    """Voice speaker component for staff NPC dialogue."""
     escaped_text = html.escape(instruction_text).replace("'", "\\'")
     components.html(
         f"""
@@ -266,7 +273,6 @@ def render_instruction_speaker_component(instruction_text, key_suffix):
 
 
 def render_audio_speaker_component(words_list, key_suffix):
-    """Audio broadcaster for store PA shopping list system."""
     words_js_array = str(words_list)
     components.html(
         f"""
@@ -349,7 +355,6 @@ def render_audio_speaker_component(words_list, key_suffix):
 
 
 def render_mic_component(key_suffix, continuous_mode=False):
-    """Voice speech-to-text recording input component."""
     is_continuous_js = "true" if continuous_mode else "false"
     components.html(
         f"""
@@ -368,7 +373,6 @@ def render_mic_component(key_suffix, continuous_mode=False):
     const isContinuous = {is_continuous_js};
     let recognition = null, listening = false;
     let baseText = "";
-    let isProgrammaticChange = false;
 
     function resetToStandby() {{
       listening = false;
@@ -394,7 +398,6 @@ def render_mic_component(key_suffix, continuous_mode=False):
           window.HTMLTextAreaElement.prototype, "value"
         );
         
-        isProgrammaticChange = true;
         if (nativeInputValueSetter && nativeInputValueSetter.set) {{
           nativeInputValueSetter.set.call(target, text);
         }} else {{
@@ -402,7 +405,6 @@ def render_mic_component(key_suffix, continuous_mode=False):
         }}
         target.dispatchEvent(new Event('input', {{ bubbles: true }}));
         target.dispatchEvent(new Event('change', {{ bubbles: true }}));
-        setTimeout(() => {{ isProgrammaticChange = false; }}, 50);
       }}
     }}
 
@@ -500,15 +502,16 @@ def advance_naming_item():
         st.session_state.current_item_index += 1
         st.session_state.item_start_time = time.time()
     else:
-        st.session_state.stage = "delayed_recall_free"
+        # AFTER NAMING: ROUTE TO HER DRAWING & LANGUAGE TASKS BEFORE DELAYED RECALL
+        st.session_state.stage = "drawing_trail"
         st.session_state.item_start_time = time.time()
 
 
 # ==========================================
-# GAME FLOW STAGES WITH IMMERSIVE GRAPHICS
+# FULL INTEGRATED MoCA & GAME FLOW STAGES
 # ==========================================
 
-# --- STAGE 1: GAME WELCOME ---
+# --- STAGE 1: INTRO ---
 if st.session_state.stage == "intro":
     st.markdown(
         """
@@ -528,6 +531,12 @@ if st.session_state.stage == "intro":
         st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
         st.session_state.moca_memory_score = 0
+        st.session_state.moca_drawing_trail = 0
+        st.session_state.moca_drawing_cube = 0
+        st.session_state.moca_drawing_clock = 0
+        st.session_state.moca_language_repeat = 0
+        st.session_state.moca_language_fluency = 0
+        st.session_state.moca_abstraction = 0
         st.rerun()
 
 # --- STAGE 2: SHOPPING LIST TRIAL 1 ---
@@ -616,7 +625,7 @@ elif st.session_state.stage == "memory_reg_notice":
         st.session_state.item_start_time = time.time()
         st.rerun()
 
-# --- STAGE 5: NAMING GAME (EXPLORING MARKET STALLS WITH GRAPHICS) ---
+# --- STAGE 5: NAMING GAME ---
 elif st.session_state.stage == "naming":
     index = st.session_state.current_item_index
     item = NAMING_ITEMS[index]
@@ -631,11 +640,9 @@ elif st.session_state.stage == "naming":
         unsafe_allow_html=True,
     )
 
-    # 1. Store Staff Speaks to Patient via Avatar & Speech Bubble
     render_staff_npc(f"{item['story']}，請問這是什麼？", staff_type="assistant", staff_name="店員小花")
     render_instruction_speaker_component(inst_naming, f"naming_{index}_inst")
 
-    # 2. Market Shelf Visual Display Container
     st.markdown(
         f"""
     <div class="market-shelf-card">
@@ -657,14 +664,194 @@ elif st.session_state.stage == "naming":
             advance_naming_item()
             st.rerun()
 
-# --- STAGE 6: CHECKOUT COUNTER (FREE RECALL) ---
+# --- STAGE 6: DRAWING TASK 1 - DRAW LINE (TRAIL MAKING) ---
+elif st.session_state.stage == "drawing_trail":
+    inst_trail = "請由數字 1 連線到字母 A，再連到數字 2，交替進行（1-A-2-B...）。"
+    
+    st.markdown(
+        """
+    <div class="market-banner">
+        <h1 style="margin:0; font-size:28px; color:#FFFFFF !important;">✏️ 第三站：超市地圖連線 (Trail Making)</h1>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    render_staff_npc(inst_trail, staff_type="assistant", staff_name="店員小花")
+    render_instruction_speaker_component(inst_trail, "trail_inst")
+
+    if CANVAS_AVAILABLE:
+        st_canvas(
+            fill_color="rgba(255, 165, 0, 0.3)",
+            stroke_width=3,
+            stroke_color="#2E7D32",
+            background_color="#FFFFFF",
+            height=300,
+            width=450,
+            drawing_mode="freedraw",
+            key="canvas_trail",
+        )
+    else:
+        st.info("💡 Canvas drawing module active. (Please complete the line tracing task).")
+
+    score_trail = st.radio("【評分】連線正確 (1-A-2-B-3-C-4-D-5-E) 且無交叉：", ["不正確 (0分)", "正確 (1分)"], key="radio_trail")
+
+    if st.button("👉 完成連線，下一頁"):
+        st.session_state.moca_drawing_trail = 1 if "1分" in score_trail else 0
+        st.session_state.stage = "drawing_cube"
+        st.rerun()
+
+# --- STAGE 7: DRAWING TASK 2 - CUBE DRAWING ---
+elif st.session_state.stage == "drawing_cube":
+    inst_cube = "請在下方畫布複製這個 3D 立方體。"
+
+    st.markdown(
+        """
+    <div class="market-banner">
+        <h1 style="margin:0; font-size:28px; color:#FFFFFF !important;">✏️ 第三站：繪畫超市貨箱 (Cube Copying)</h1>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    render_staff_npc(inst_cube, staff_type="assistant", staff_name="店員小花")
+    render_instruction_speaker_component(inst_cube, "cube_inst")
+
+    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Cube_outline.svg/200px-Cube_outline.svg.png", width=150)
+
+    if CANVAS_AVAILABLE:
+        st_canvas(
+            fill_color="rgba(255, 165, 0, 0.3)",
+            stroke_width=3,
+            stroke_color="#0D47A1",
+            background_color="#FFFFFF",
+            height=280,
+            width=450,
+            drawing_mode="freedraw",
+            key="canvas_cube",
+        )
+
+    score_cube = st.radio("【評分】立方體幾何完整度 (3D結構、平行線)：", ["不正確 (0分)", "正確 (1分)"], key="radio_cube")
+
+    if st.button("👉 完成繪畫，下一頁"):
+        st.session_state.moca_drawing_cube = 1 if "1分" in score_cube else 0
+        st.session_state.stage = "drawing_clock"
+        st.rerun()
+
+# --- STAGE 8: DRAWING TASK 3 - CLOCK DRAWING ---
+elif st.session_state.stage == "drawing_clock":
+    inst_clock = "請畫一個時鐘，標出所有數字，並將時間指在 11 點 10 分。"
+
+    st.markdown(
+        """
+    <div class="market-banner">
+        <h1 style="margin:0; font-size:28px; color:#FFFFFF !important;">🕒 第三站：畫出超市時鐘 (Clock Drawing)</h1>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    render_staff_npc(inst_clock, staff_type="assistant", staff_name="店員小花")
+    render_instruction_speaker_component(inst_clock, "clock_inst")
+
+    if CANVAS_AVAILABLE:
+        st_canvas(
+            fill_color="rgba(255, 165, 0, 0.3)",
+            stroke_width=3,
+            stroke_color="#1B5E20",
+            background_color="#FFFFFF",
+            height=320,
+            width=450,
+            drawing_mode="freedraw",
+            key="canvas_clock",
+        )
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        c1 = st.checkbox("圓形輪廓正確 (1分)", key="ck_clock_1")
+    with col2:
+        c2 = st.checkbox("數字1-12位置正確 (1分)", key="ck_clock_2")
+    with col3:
+        c3 = st.checkbox("指針時間11:10正確 (1分)", key="ck_clock_3")
+
+    if st.button("👉 完成時鐘，下一頁"):
+        st.session_state.moca_drawing_clock = sum([c1, c2, c3])
+        st.session_state.stage = "language_repeat"
+        st.rerun()
+
+# --- STAGE 9: LANGUAGE REPEAT ---
+elif st.session_state.stage == "language_repeat":
+    inst_lang = "請仔細聽店員說的話，並完整重覆說一次。"
+
+    st.markdown(
+        """
+    <div class="market-banner">
+        <h1 style="margin:0; font-size:28px; color:#FFFFFF !important;">🗣️ 第四站：語言測試 - 句子重覆</h1>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    render_staff_npc(inst_lang, staff_type="assistant", staff_name="店員小花")
+
+    s1 = LANGUAGE_REPEAT_SENTENCES[0]["text"]
+    st.info(f"句子 1：『{s1}』")
+    render_instruction_speaker_component(s1, "sent_1_spk")
+    render_mic_component("sent_1_mic")
+
+    with st.form(key="form_sent_repeat"):
+        u_sent_1 = st.text_input("重覆句子 1：", key="in_repeat_1")
+        submit_lang = st.form_submit_button("👉 完成重覆，進入類比測試")
+
+        if submit_lang:
+            score = 0
+            if any(k in u_sent_1 for k in LANGUAGE_REPEAT_SENTENCES[0]["key_terms"]):
+                score += 1
+            st.session_state.moca_language_repeat = score
+            st.session_state.stage = "abstraction"
+            st.rerun()
+
+# --- STAGE 10: ABSTRACTION (SIMILARITIES) ---
+elif st.session_state.stage == "abstraction":
+    inst_abs = "請說出這兩樣東西屬於什麼共同類別。"
+
+    st.markdown(
+        """
+    <div class="market-banner">
+        <h1 style="margin:0; font-size:28px; color:#FFFFFF !important;">💡 第五站：抽象思考 - 詞語類比</h1>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    render_staff_npc("請說出【香蕉 – 桔子】和【火車 – 腳踏車】分別屬於什麼類別？", staff_type="manager")
+    render_instruction_speaker_component("請說出這兩樣東西屬於什麼共同類別。", "abs_inst")
+
+    render_mic_component("abs_mic_1")
+
+    with st.form(key="form_abstraction"):
+        a1 = st.text_input("1. 香蕉 – 桔子 (例如: 水果)：", key="in_abs_1")
+        a2 = st.text_input("2. 火車 – 腳踏車 (例如: 交通工具)：", key="in_abs_2")
+
+        if st.form_submit_button("👉 前往超市結帳處 (Delayed Recall)"):
+            score = 0
+            if any(syn in a1 for syn in ABSTRACTION_PAIRS[0]["synonyms"]):
+                score += 1
+            if any(syn in a2 for syn in ABSTRACTION_PAIRS[1]["synonyms"]):
+                score += 1
+            st.session_state.moca_abstraction = score
+            st.session_state.stage = "delayed_recall_free"
+            st.session_state.item_start_time = time.time()
+            st.rerun()
+
+# --- STAGE 11: CHECKOUT COUNTER (FREE RECALL) ---
 elif st.session_state.stage == "delayed_recall_free":
     inst_free = "歡迎來到結帳處！請講出最開始廣播的 5 樣東西"
 
     st.markdown(
         """
     <div class="market-banner">
-        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">💵 第三站：結帳</h1>
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">💵 第六站：結帳處 (延遲記憶回想)</h1>
     </div>
     """,
         unsafe_allow_html=True,
@@ -711,7 +898,7 @@ elif st.session_state.stage == "delayed_recall_free":
                 st.session_state.stage = "complete"
             st.rerun()
 
-# --- STAGE 7: AISLE ASSISTANT (CUED RECALL) ---
+# --- STAGE 12: AISLE ASSISTANT (CUED RECALL) ---
 elif st.session_state.stage == "delayed_recall_cued_step":
     missed_list = st.session_state.missed_items
     curr_idx = st.session_state.cued_current_index
@@ -767,15 +954,15 @@ elif st.session_state.stage == "delayed_recall_cued_step":
                 st.session_state.cued_sub_step = "category"
                 st.rerun()
 
-# --- STAGE 8: GAME COMPLETE & BACKGROUND CLINICAL DASHBOARD ---
+# --- STAGE 13: GAME COMPLETE & CLINICAL DASHBOARD ---
 elif st.session_state.stage == "complete":
     st.balloons()
 
     st.markdown(
         """
     <div class="market-banner">
-        <h1 style="margin:0; font-size:36px; color:#FFFFFF !important;">🎉 成功完成購物！</h1>
-        <p style="margin:5px 0 0 0; font-size:20px;">多謝惠顧！你已順利買齊所有物品並完成結帳！</p>
+        <h1 style="margin:0; font-size:36px; color:#FFFFFF !important;">🎉 成功完成購物與認知評估！</h1>
+        <p style="margin:5px 0 0 0; font-size:20px;">多謝惠顧！你已順利買齊所有物品並完成所有測試！</p>
     </div>
     """,
         unsafe_allow_html=True,
@@ -786,50 +973,33 @@ elif st.session_state.stage == "complete":
     if st.button("🔄 再玩一次 (Play Again)"):
         st.session_state.stage = "intro"
         st.session_state.current_item_index = 0
-        st.session_state.telemetry_logs = []
-        st.session_state.moca_naming_score = 0
-        st.session_state.moca_memory_score = 0
-        st.session_state.reg_trial_1_items = []
-        st.session_state.reg_trial_2_items = []
-        st.session_state.recalled_free_items = []
-        st.session_state.missed_items = []
-        st.session_state.cued_current_index = 0
-        st.session_state.cued_sub_step = "category"
-        st.session_state.recalled_cued_items = {}
-        st.session_state.recalled_choice_items = {}
         st.rerun()
 
-    # Backend Dashboard for OT/ST Assessment
-    with st.expander("🩺 Occupational Therapist / Speech Telemetry Dashboard", expanded=False):
-        st.subheader("MoCA Sub-score Summary")
-        col1, col2, col3 = st.columns(3)
+    # Integrated Clinical Telemetry & Combined Sub-score Dashboard
+    with st.expander("🩺 Occupational Therapist / Clinical Telemetry Dashboard", expanded=True):
+        st.subheader("Integrated MoCA Cognitive Sub-Score Summary")
+
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("1. Naming Sub-score", f"{st.session_state.moca_naming_score} / 3 Points")
+            st.metric("Visuospatial / Drawing", f"{st.session_state.moca_drawing_trail + st.session_state.moca_drawing_cube + st.session_state.moca_drawing_clock} / 5 Pts")
         with col2:
-            st.metric("2. Delayed Recall (Free)", f"{st.session_state.moca_memory_score} / 5 Points")
+            st.metric("Animal Naming", f"{st.session_state.moca_naming_score} / 3 Pts")
         with col3:
-            total = st.session_state.moca_naming_score + st.session_state.moca_memory_score
-            st.metric("Combined MoCA Sub-total", f"{total} / 8 Points")
+            st.metric("Language & Abstraction", f"{st.session_state.moca_language_repeat + st.session_state.moca_abstraction} / 4 Pts")
+        with col4:
+            st.metric("Delayed Memory Recall", f"{st.session_state.moca_memory_score} / 5 Pts")
 
-        st.subheader("Memory Breakdown")
-        st.write(
-            f"**Registration Trial 1 Spoken:** {', '.join(st.session_state.reg_trial_1_items) if st.session_state.reg_trial_1_items else 'None'}"
-        )
-        st.write(
-            f"**Registration Trial 2 Spoken:** {', '.join(st.session_state.reg_trial_2_items) if st.session_state.reg_trial_2_items else 'None'}"
-        )
-        st.write(
-            f"**Free Recall (Scored):** {', '.join(st.session_state.recalled_free_items) if st.session_state.recalled_free_items else 'None'}"
+        total_moca = (
+            st.session_state.moca_drawing_trail
+            + st.session_state.moca_drawing_cube
+            + st.session_state.moca_drawing_clock
+            + st.session_state.moca_naming_score
+            + st.session_state.moca_language_repeat
+            + st.session_state.moca_abstraction
+            + st.session_state.moca_memory_score
         )
 
-        if st.session_state.recalled_cued_items or st.session_state.recalled_choice_items:
-            st.write("**Cued / Multiple-Choice Analysis (Encoding vs Retrieval Deficit Analysis):**")
-            st.json(
-                {
-                    "Category_Cues": st.session_state.recalled_cued_items,
-                    "Multiple_Choices": st.session_state.recalled_choice_items,
-                }
-            )
+        st.markdown(f"### 🏆 Combined MoCA Clinical Subtotal: **{total_moca} / 17 Points**")
 
         df = pd.DataFrame(st.session_state.telemetry_logs)
         st.dataframe(df)
@@ -837,6 +1007,6 @@ elif st.session_state.stage == "complete":
             st.download_button(
                 "📥 Download Clinical Telemetry Log (.CSV)",
                 df.to_csv(index=False).encode("utf-8"),
-                f"moca_cantonese_speech_telemetry_{int(time.time())}.csv",
+                f"moca_integrated_telemetry_{int(time.time())}.csv",
                 "text/csv",
             )
