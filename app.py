@@ -15,199 +15,8 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# --- VISUAL CSS & SUPERMARKET IMMERSION STYLING ---
-st.markdown(
-    """
-<style>
-/* Full Supermarket Store Background Image with Blur Overlay */
-.stApp {
-    background: linear-gradient(rgba(245, 247, 248, 0.88), rgba(245, 247, 248, 0.88)),
-                url('https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=1600&auto=format&fit=crop');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-}
-
-/* Supermarket Banner Style */
-.market-banner {
-    background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%);
-    color: #FFFFFF !important;
-    padding: 20px;
-    border-radius: 16px;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    margin-bottom: 20px;
-}
-
-/* NPC Staff & Speech Bubble Layout */
-.npc-container {
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.npc-avatar {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    border: 4px solid #2E7D32;
-    background-color: #E8F5E9;
-    object-fit: cover;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    flex-shrink: 0;
-}
-
-.speech-bubble {
-    position: relative;
-    background: #FFFFFF;
-    border: 3px solid #2E7D32;
-    border-radius: 18px;
-    padding: 16px 20px;
-    max-width: 450px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-    font-size: 20px !important;
-    color: #1C3125;
-    font-weight: 600;
-    line-height: 1.4 !important;
-}
-
-.speech-bubble:after {
-    content: '';
-    position: absolute;
-    left: -14px;
-    bottom: 25px;
-    border-width: 8px 14px 8px 0;
-    border-style: solid;
-    border-color: transparent #2E7D32 transparent transparent;
-    display: block;
-    width: 0;
-}
-
-/* Supermarket Shelf / Display Card */
-.market-shelf-card {
-    background: rgba(255, 255, 255, 0.95);
-    border: 2px solid #81C784;
-    border-radius: 16px;
-    padding: 20px;
-    text-align: center;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-    margin-bottom: 20px;
-}
-
-.product-image {
-    width: 220px;
-    height: 220px;
-    object-fit: cover;
-    border-radius: 12px;
-    border: 2px solid #C8E6C9;
-    margin: 10px auto;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.item-badge {
-    display: inline-block;
-    background: #FF9800;
-    color: #FFFFFF;
-    font-weight: bold;
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 18px;
-    margin-bottom: 10px;
-}
-
-/* Input & Button Customization */
-.stTextInput > div > div > input {
-    font-size: 22px !important;
-    height: 58px !important;
-    border-radius: 12px !important;
-}
-
-.stButton>button {
-    width: 100% !important;
-    height: 60px !important;
-    font-size: 22px !important;
-    font-weight: bold !important;
-    border-radius: 12px !important;
-    background-color: #2E7D32 !important;
-    color: #FFFFFF !important;
-    border: none !important;
-    margin-top: 10px !important;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.12) !important;
-}
-
-.stButton>button:hover {
-    background-color: #1B5E20 !important;
-}
-</style>
-""",
-    unsafe_allow_html=True,
-)
-
-# Initialize Session State
-for key, value in {
-    "stage": "intro",
-    "current_item_index": 0,
-    "telemetry_logs": [],
-    "item_start_time": None,
-    "moca_naming_score": 0,
-    "moca_memory_score": 0,
-    "reg_trial_1_items": [],
-    "reg_trial_2_items": [],
-    "recalled_free_items": [],
-    "missed_items": [],
-    "cued_current_index": 0,
-    "cued_sub_step": "category",
-    "recalled_cued_items": {},
-    "recalled_choice_items": {},
-    "game1_data": None,
-}.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
-
-# --- GAME DATA ---
-MEMORY_ITEMS = [
-    {"id": "mem_1", "name": "雪櫃", "category": "一種電器", "options": ["雪櫃", "風扇", "電視"]},
-    {"id": "mem_2", "name": "郵局", "category": "一種建築物", "options": ["消防局", "郵局", "醫院"]},
-    {"id": "mem_3", "name": "榕樹", "category": "一種植物", "options": ["橡樹", "榕樹", "松樹"]},
-    {"id": "mem_4", "name": "塑膠", "category": "一種物料", "options": ["紙張", "金屬", "塑膠"]},
-    {"id": "mem_5", "name": "藍色", "category": "一種顏色", "options": ["藍色", "紅色", "綠色"]},
-]
-
-NAMING_ITEMS = [
-    {
-        "id": "item_1",
-        "tier": "Warmup",
-        "image_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTa95wEIgRD64bergbVn9BgZ_w-Ia6eshD8OhL3ezEV1w&s=10",
-        "primary_name": "蝴蝶",
-        "acceptable_synonyms": ["蝴蝶", "呢個係蝴蝶", "這是蝴蝶", "呢隻係蝴蝶"],
-        "moca_weight": 1,
-        "story": "剛剛在超市外面看到這東西",
-    },
-    {
-        "id": "item_2",
-        "tier": "Moderate",
-        "image_url": "https://cdn.vectorstock.com/i/750p/77/18/a-whimsical-black-and-white-line-drawing-vector-62527718.avif",
-        "primary_name": "八爪魚",
-        "acceptable_synonyms": ["八爪魚", "呢個係八爪魚", "這是八爪魚", "呢隻係八爪魚", "章魚"],
-        "moca_weight": 1,
-        "story": "進入超市後，檔主向你展示了這樣東西",
-    },
-    {
-        "id": "item_3",
-        "tier": "Low",
-        "image_url": "https://www.publicdomainpictures.net/pictures/190000/velka/sloth-drawing.jpg",
-        "primary_name": "樹懶",
-        "acceptable_synonyms": ["樹懶", "呢個係樹懶", "這是樹懶", "呢隻係樹懶"],
-        "moca_weight": 1,
-        "story": "貨架上有一張圖片",
-    },
-]
-
 # --- GAME 1 HTML CODE ---
-GAME1_HTML = """
-<!DOCTYPE html>
+GAME1_HTML = """<!DOCTYPE html>
 <html lang="zh-HK">
 <head>
 <meta charset="UTF-8">
@@ -308,7 +117,7 @@ GAME1_HTML = """
   }
 
   #hint {
-    font-size: 20px;
+    font-size: 23px;
     font-weight: 700;
     color: #7A1F1F;
     width: 100%;
@@ -325,15 +134,15 @@ GAME1_HTML = """
 
   .btn {
     font-family: inherit;
-    font-size: 20px;
+    font-size: 25px;
     font-weight: 900;
-    padding: 10px 18px;
+    padding: 12px 20px;
     border: 3px solid #5A1515;
     border-radius: 10px;
     background: linear-gradient(180deg, #A83232 0%, #7A1F1F 100%);
     color: #F5E6C8;
     cursor: pointer;
-    min-width: 90px;
+    min-width: 100px;
     box-shadow: 0 3px 0 #5A1515;
   }
 
@@ -375,7 +184,7 @@ GAME1_HTML = """
     background: linear-gradient(180deg, #F5E6C8, #E8D4A8);
     border: 6px solid #7A1F1F;
     border-radius: 24px;
-    padding: 28px 36px;
+    padding: 32px 40px;
     max-width: 450px;
     text-align: center;
     box-shadow: 0 0 0 8px #D4A017, 0 30px 80px rgba(0,0,0,0.6);
@@ -383,18 +192,18 @@ GAME1_HTML = """
   }
 
   @keyframes popIn {
-    0%   { opacity: 0; transform: scale(0.7); }
+    0%    { opacity: 0; transform: scale(0.7); }
     100% { opacity: 1; transform: scale(1); }
   }
 
   #finish-card h2 {
-    font-size: 28px;
+    font-size: 32px;
     color: #7A1F1F;
     margin-bottom: 12px;
   }
 
   #finish-card p {
-    font-size: 24px;
+    font-size: 30px;
     color: #5A4030;
     line-height: 1.6;
   }
@@ -404,7 +213,8 @@ GAME1_HTML = """
 
 <div id="game-wrap">
   <div id="bg"></div>
-  <svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+  <svg id="canvas" xmlns="http://www.w3.org/2000/svg"
+       width="100%" height="100%">
     <g id="lines-layer"></g>
   </svg>
 </div>
@@ -454,23 +264,31 @@ function injectValueIntoStreamlitWidget(text) {
 }
 
 const ITEMS = [
-  { id: "1d",   type: "coin",  text: "$1",   value: 1,  c1: "#F0D580", c2: "#B08F2E", c3: "#8A6F1E" },
-  { id: "10b",  type: "bill",  text: "$10",  value: 10, c1: "#C9A0DC", c2: "#9B59B6", c3: "#6A3B8A" },
-  { id: "2d",   type: "coin",  text: "$2",   value: 2,  c1: "#F0D580", c2: "#B08F2E", c3: "#8A6F1E" },
-  { id: "20b",  type: "bill",  text: "$20",  value: 20, c1: "#8AB6E8", c2: "#4A7BC4", c3: "#2D4A8A" },
-  { id: "5d",   type: "coin",  text: "$5",   value: 5,  c1: "#E8E8E8", c2: "#9A9A9A", c3: "#6A6A6A" },
-  { id: "50b",  type: "bill",  text: "$50",  value: 50, c1: "#A0D9A0", c2: "#4A8A4E", c3: "#2D5A30" },
-  { id: "10d",  type: "coin",  text: "$10",  value: 10, c1: "#D4B584", c2: "#8B6F3A", c3: "#6A4F28" },
-  { id: "100b", type: "bill",  text: "$100", value: 100,c1: "#E88A8A", c2: "#C0392B", c3: "#7A1F1F" },
+  { id: "1d",   type: "coin",  text: "$1",   value: 1,
+    c1: "#F0D580", c2: "#B08F2E", c3: "#8A6F1E" },
+  { id: "10b",  type: "bill",  text: "$10",  value: 10,
+    c1: "#C9A0DC", c2: "#9B59B6", c3: "#6A3B8A" },
+  { id: "2d",   type: "coin",  text: "$2",   value: 2,
+    c1: "#F0D580", c2: "#B08F2E", c3: "#8A6F1E" },
+  { id: "20b",  type: "bill",  text: "$20",  value: 20,
+    c1: "#8AB6E8", c2: "#4A7BC4", c3: "#2D4A8A" },
+  { id: "5d",   type: "coin",  text: "$5",   value: 5,
+    c1: "#E8E8E8", c2: "#9A9A9A", c3: "#6A6A6A" },
+  { id: "50b",  type: "bill",  text: "$50",  value: 50,
+    c1: "#A0D9A0", c2: "#4A8A4E", c3: "#2D5A30" },
+  { id: "10d",  type: "coin",  text: "$10",  value: 10,
+    c1: "#D4B584", c2: "#8B6F3A", c3: "#6A4F28" },
+  { id: "100b", type: "bill",  text: "$100", value: 100,
+    c1: "#E88A8A", c2: "#C0392B", c3: "#7A1F1F" },
 ];
 
 const CORRECT_SEQUENCE = ["1d", "10b", "2d", "20b", "5d", "50b", "10d", "100b"];
 const TARGET_CONNECTIONS = ITEMS.length - 1;
 
-const COIN_SIZE = 60;
-const BILL_W = 85;
-const BILL_H = 55;
-const FOOTER_H = 150;
+const COIN_SIZE = 65;
+const BILL_W = 90;
+const BILL_H = 58;
+const FOOTER_H = 170;
 
 const FALLBACK_LAYOUT = [
   { id: "1d",   x: 0.25, y: 0.18 },
@@ -559,7 +377,7 @@ function generateLayout(W, H) {
       const minDist = Math.max(size.w, size.h) + 20;
 
       while (tries < 200) {
-        const margin = 20;
+        const margin = 30;
         x = size.w / 2 + margin + Math.random() * (W - size.w - margin * 2);
         y = size.h / 2 + margin + Math.random() * (H - size.h - margin * 2);
 
@@ -887,6 +705,196 @@ window.addEventListener("resize", () => {
 </html>
 """
 
+# --- METHOD 1: VISUAL CSS & SUPERMARKET IMMERSION STYLING ---
+st.markdown(
+    """
+<style>
+/* Full Supermarket Store Background Image with Blur Overlay */
+.stApp {
+    background: linear-gradient(rgba(245, 247, 248, 0.88), rgba(245, 247, 248, 0.88)),
+                url('https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=1600&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+/* Supermarket Banner Style */
+.market-banner {
+    background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%);
+    color: #FFFFFF !important;
+    padding: 20px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    margin-bottom: 20px;
+}
+
+/* NPC Staff & Speech Bubble Layout */
+.npc-container {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.npc-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid #2E7D32;
+    background-color: #E8F5E9;
+    object-fit: cover;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    flex-shrink: 0;
+}
+
+.speech-bubble {
+    position: relative;
+    background: #FFFFFF;
+    border: 3px solid #2E7D32;
+    border-radius: 18px;
+    padding: 16px 20px;
+    max-width: 450px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    font-size: 20px !important;
+    color: #1C3125;
+    font-weight: 600;
+    line-height: 1.4 !important;
+}
+
+.speech-bubble:after {
+    content: '';
+    position: absolute;
+    left: -14px;
+    bottom: 25px;
+    border-width: 8px 14px 8px 0;
+    border-style: solid;
+    border-color: transparent #2E7D32 transparent transparent;
+    display: block;
+    width: 0;
+}
+
+/* Supermarket Shelf / Display Card */
+.market-shelf-card {
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid #81C784;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+
+.product-image {
+    width: 220px;
+    height: 220px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 2px solid #C8E6C9;
+    margin: 10px auto;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.item-badge {
+    display: inline-block;
+    background: #FF9800;
+    color: #FFFFFF;
+    font-weight: bold;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+/* Input & Button Customization */
+.stTextInput > div > div > input {
+    font-size: 22px !important;
+    height: 58px !important;
+    border-radius: 12px !important;
+}
+
+.stButton>button {
+    width: 100% !important;
+    height: 60px !important;
+    font-size: 22px !important;
+    font-weight: bold !important;
+    border-radius: 12px !important;
+    background-color: #2E7D32 !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    margin-top: 10px !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12) !important;
+}
+
+.stButton>button:hover {
+    background-color: #1B5E20 !important;
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+# Initialize Session State
+for key, value in {
+    "stage": "game1",
+    "game1_result": None,
+    "current_item_index": 0,
+    "telemetry_logs": [],
+    "item_start_time": None,
+    "moca_naming_score": 0,
+    "moca_memory_score": 0,
+    "reg_trial_1_items": [],
+    "reg_trial_2_items": [],
+    "recalled_free_items": [],
+    "missed_items": [],
+    "cued_current_index": 0,
+    "cued_sub_step": "category",
+    "recalled_cued_items": {},
+    "recalled_choice_items": {},
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+# --- GAME DATA ---
+MEMORY_ITEMS = [
+    {"id": "mem_1", "name": "雪櫃", "category": "一種電器", "options": ["雪櫃", "風扇", "電視"]},
+    {"id": "mem_2", "name": "郵局", "category": "一種建築物", "options": ["消防局", "郵局", "醫院"]},
+    {"id": "mem_3", "name": "榕樹", "category": "一種植物", "options": ["橡樹", "榕樹", "松樹"]},
+    {"id": "mem_4", "name": "塑膠", "category": "一種物料", "options": ["紙張", "金屬", "塑膠"]},
+    {"id": "mem_5", "name": "藍色", "category": "一種顏色", "options": ["藍色", "紅色", "綠色"]},
+]
+
+NAMING_ITEMS = [
+    {
+        "id": "item_1",
+        "tier": "Warmup",
+        "image_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTa95wEIgRD64bergbVn9BgZ_w-Ia6eshD8OhL3ezEV1w&s=10",
+        "primary_name": "蝴蝶",
+        "acceptable_synonyms": ["蝴蝶", "呢個係蝴蝶", "這是蝴蝶", "呢隻係蝴蝶"],
+        "moca_weight": 1,
+        "story": "剛剛在超市外面看到這東西",
+    },
+    {
+        "id": "item_2",
+        "tier": "Moderate",
+        "image_url": "https://cdn.vectorstock.com/i/750p/77/18/a-whimsical-black-and-white-line-drawing-vector-62527718.avif",
+        "primary_name": "八爪魚",
+        "acceptable_synonyms": ["八爪魚", "呢個係八爪魚", "這是八爪魚", "呢隻係八爪魚", "章魚"],
+        "moca_weight": 1,
+        "story": "進入超市後，檔主向你展示了這樣東西",
+    },
+    {
+        "id": "item_3",
+        "tier": "Low",
+        "image_url": "https://www.publicdomainpictures.net/pictures/190000/velka/sloth-drawing.jpg",
+        "primary_name": "樹懶",
+        "acceptable_synonyms": ["樹懶", "呢個係樹懶", "這是樹懶", "呢隻係樹懶"],
+        "moca_weight": 1,
+        "story": "貨架上有一張圖片",
+    },
+]
+
 # --- UI COMPONENT FUNCTIONS ---
 
 def render_staff_npc(dialogue_text, staff_type="manager", staff_name="店長阿Ming"):
@@ -979,13 +987,13 @@ def render_audio_speaker_component(words_list, key_suffix):
         return;
       }}
       if (isPlaying) return;
-
+      
       window.speechSynthesis.cancel();
       isPlaying = true;
       btn.disabled = true;
       btn.style.background = '#757575';
       status.textContent = '🔊 廣播中...';
-
+      
       let index = 0;
 
       function speakNext() {{
@@ -1034,6 +1042,7 @@ def render_audio_speaker_component(words_list, key_suffix):
 
 def render_mic_component(key_suffix, continuous_mode=False):
     """Voice speech-to-text recording input component."""
+    is_continuous_js = "true" if continuous_mode else "false"
     components.html(
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
@@ -1043,80 +1052,111 @@ def render_mic_component(key_suffix, continuous_mode=False):
     .status {{ font-size:15px; text-align:center; margin-top:6px; color:#2E7D32; font-weight:bold; }}
     </style></head><body>
     <button id="mic_{key_suffix}" type="button">🎤 按此語音回答 (Speak)</button>
-    <div class="status" id="status_{key_suffix}">請點擊按鈕開始說話</div>
+    <div class="status" id="status_{key_suffix}">點擊麥克風說出答案</div>
 
     <script>
-    const btn = document.getElementById('mic_{key_suffix}');
-    const status = document.getElementById('status_{key_suffix}');
-    let recognition = null;
-    let isListening = false;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const mic = document.getElementById('mic_{key_suffix}'), status = document.getElementById('status_{key_suffix}');
+    const isContinuous = {is_continuous_js};
+    let recognition = null, listening = false;
+    let baseText = "";
+    let isProgrammaticChange = false;
 
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {{
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
+    function resetToStandby() {{
+      listening = false;
+      mic.style.background = '#2E7D32';
+      mic.textContent = '🎤 按此語音回答 (Speak)';
+      status.textContent = '🟢 點擊麥克風說出答案';
+    }}
+
+    function getCurrentInputText() {{
+      const doc = window.parent.document;
+      const inputs = doc.querySelectorAll('input[type="text"], textarea');
+      return inputs.length > 0 ? inputs[0].value.trim() : "";
+    }}
+
+    function injectValueIntoStreamlitWidget(text) {{
+      const doc = window.parent.document;
+      const inputs = doc.querySelectorAll('input[type="text"], textarea');
+      if (inputs.length > 0) {{
+        const target = inputs[0];
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype, "value"
+        ) || Object.getOwnPropertyDescriptor(
+          window.HTMLTextAreaElement.prototype, "value"
+        );
+        
+        isProgrammaticChange = true;
+        if (nativeInputValueSetter && nativeInputValueSetter.set) {{
+          nativeInputValueSetter.set.call(target, text);
+        }} else {{
+          target.value = text;
+        }}
+        target.dispatchEvent(new Event('input', {{ bubbles: true }}));
+        target.dispatchEvent(new Event('change', {{ bubbles: true }}));
+        setTimeout(() => {{ isProgrammaticChange = false; }}, 50);
+      }}
+    }}
+
+    if(SR) {{
+      recognition = new SR();
       recognition.lang = 'zh-HK';
-      recognition.continuous = {'true' if continuous_mode else 'false'};
-      recognition.interimResults = false;
+      recognition.continuous = isContinuous;
+      recognition.interimResults = isContinuous;
 
       recognition.onstart = () => {{
-        isListening = true;
-        btn.style.background = '#C62828';
-        btn.textContent = '🛑 聆聽中...請說話';
-        status.textContent = '正在錄音...';
+        listening = true;
+        mic.style.background = '#D32F2F';
+        mic.textContent = '⏹️ 停止錄音';
+        status.textContent = '🔴 正在聆聽您的回答...';
       }};
 
-      recognition.onresult = (e) => {{
-        let text = '';
-        for (let i = e.resultIndex; i < e.results.length; ++i) {{
-          text += e.results[i][0].transcript;
-        }}
-        text = text.trim();
-        if (text) {{
-          try {{
-            const win = window.parent;
-            const doc = win.document;
-            const inputs = doc.querySelectorAll('input[type="text"], textarea');
-            if (inputs.length > 0) {{
-              const target = inputs[inputs.length - 1];
-              const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-              setter.call(target, text);
-              target.dispatchEvent(new Event('input', {{ bubbles: true }}));
-              target.dispatchEvent(new Event('change', {{ bubbles: true }}));
-              status.textContent = '✅ 已識別：' + text;
-            }}
-          }} catch(e) {{
-            status.textContent = '識別完成：' + text;
+      recognition.onresult = (event) => {{
+        if (isContinuous) {{
+          let interimTranscript = '';
+          let finalTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {{
+            if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+            else interimTranscript += event.results[i][0].transcript;
           }}
+
+          if (finalTranscript) baseText += (baseText ? ' ' : '') + finalTranscript.trim();
+          const displayText = baseText + (interimTranscript ? (baseText ? ' ' : '') + interimTranscript : '');
+          status.textContent = '🎧 記錄中...';
+          injectValueIntoStreamlitWidget(displayText);
+        }} else {{
+          const text = event.results[0][0].transcript.trim();
+          const combined = baseText ? (baseText + ' ' + text) : text;
+          status.textContent = '🎧 聽到: ' + text;
+          injectValueIntoStreamlitWidget(combined);
         }}
       }};
 
-      recognition.onerror = (e) => {{
-        status.textContent = '❌ 語音識別出錯，請重試';
-        resetBtn();
+      recognition.onerror = (event) => {{
+        if (event.error !== 'no-speech') status.textContent = '⚠️ 語音問題 (' + event.error + ')';
       }};
 
       recognition.onend = () => {{
-        resetBtn();
+        if (listening && isContinuous) {{
+          try {{ recognition.start(); }} catch(e) {{ resetToStandby(); }}
+        }} else resetToStandby();
       }};
     }} else {{
-      btn.disabled = true;
-      btn.style.background = '#757575';
-      status.textContent = '❌ 瀏覽器不支援語音輸入';
+      mic.disabled = true;
+      status.textContent = '❌ 不支援語音';
     }}
 
-    function resetBtn() {{
-      isListening = false;
-      btn.style.background = '#2E7D32';
-      btn.textContent = '🎤 按此語音回答 (Speak)';
-    }}
-
-    btn.onclick = () => {{
-      if (!recognition) return;
-      if (isListening) {{
-        recognition.stop();
-      }} else {{
-        recognition.start();
+    mic.onclick = () => {{
+      if(!recognition) return;
+      if(listening) {{ 
+        listening = false; 
+        recognition.stop(); 
+        resetToStandby(); 
+        return; 
       }}
+      baseText = getCurrentInputText();
+      try {{ recognition.start(); }} catch(e) {{}}
     }};
     </script></body></html>
     """,
@@ -1124,269 +1164,401 @@ def render_mic_component(key_suffix, continuous_mode=False):
     )
 
 
-# --- STAGE CONTROLLER & RENDERERS ---
+def evaluate_naming_answer(answer):
+    item = NAMING_ITEMS[st.session_state.current_item_index]
+    elapsed = round(time.time() - st.session_state.item_start_time, 2) if st.session_state.item_start_time else 0.0
+    clean = answer.strip().replace(" ", "").replace("呢個係", "").replace("這是", "").replace("呢隻係", "")
+    correct = any(s in answer or s in clean for s in item["acceptable_synonyms"])
 
-st.markdown(
-    """
-<div class="market-banner">
-    <h1 style="margin:0; font-size: 30px;">🛒 超級市場大搜查</h1>
-    <p style="margin:5px 0 0 0; font-size: 18px;">Supermarket Cognitive Assessment Adventure</p>
-</div>
-""",
-    unsafe_allow_html=True,
-)
+    if correct:
+        st.session_state.moca_naming_score += item["moca_weight"]
 
-# STAGE 0: INTRO
-if st.session_state.stage == "intro":
-    intro_text = "歡迎黎到超級市場！今天店長需要你協助完成幾項特別任務，順便購物，準備好就開始啦！"
-    render_staff_npc(intro_text, staff_type="manager", staff_name="店長阿Ming")
-    render_instruction_speaker_component(intro_text, "intro")
-
-    if st.button("🚀 開始搜查任務 (Start Adventure)"):
-        st.session_state.stage = "mem_reg_intro"
-        st.rerun()
-
-# STAGE 1.1: MEMORY REGISTRATION INTRO
-elif st.session_state.stage == "mem_reg_intro":
-    text = "首先，廣播會讀出 5 樣需要買嘅物品，請仔細聽並記住佢哋！廣播完畢後請重複說出物品。"
-    render_staff_npc(text, staff_type="manager")
-    render_instruction_speaker_component(text, "mem_reg_intro")
-
-    if st.button("📢 進入聽力廣播 (Listen Shopping List)"):
-        st.session_state.stage = "mem_reg_trial_1"
-        st.rerun()
-
-# STAGE 1.2: MEMORY REGISTRATION TRIAL 1
-elif st.session_state.stage == "mem_reg_trial_1":
-    text = "請點擊按鈕收聽第一輪超市廣播，然後將記得嘅物品說出或填寫在下方："
-    render_staff_npc(text, staff_type="manager")
-
-    words = [item["name"] for item in MEMORY_ITEMS]
-    render_audio_speaker_component(words, "trial_1")
-
-    st.markdown("---")
-    render_mic_component("trial_1", continuous_mode=True)
-
-    user_input = st.text_input(
-        "請輸入或語音回答記得的物品 (可以用空格或逗號隔開)：", key="input_trial_1"
+    st.session_state.telemetry_logs.append(
+        {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "task": "naming",
+            "item_id": item["id"],
+            "target_name": item["primary_name"],
+            "user_spoken_raw": answer,
+            "is_correct": correct,
+            "latency_seconds": elapsed,
+        }
     )
+    return correct
 
-    if st.button("➡️ 提交第 1 輪記憶"):
-        st.session_state.reg_trial_1_items = [
-            w.strip() for w in user_input.replace("，", " ").replace(",", " ").split() if w.strip()
-        ]
-        st.session_state.stage = "mem_reg_trial_2"
-        st.rerun()
 
-# STAGE 1.3: MEMORY REGISTRATION TRIAL 2
-elif st.session_state.stage == "mem_reg_trial_2":
-    text = "非常好！現在會再廣播多一次該 5 樣物品，請再次仔細聽並補充你記得的物品："
-    render_staff_npc(text, staff_type="manager")
-
-    words = [item["name"] for item in MEMORY_ITEMS]
-    render_audio_speaker_component(words, "trial_2")
-
-    st.markdown("---")
-    render_mic_component("trial_2", continuous_mode=True)
-
-    user_input = st.text_input(
-        "請輸入或語音回答記得的物品 (可以用空格隔開)：", key="input_trial_2"
-    )
-
-    if st.button("➡️ 完成記憶學習，進入下一關"):
-        st.session_state.reg_trial_2_items = [
-            w.strip() for w in user_input.replace("，", " ").replace(",", " ").split() if w.strip()
-        ]
-        st.session_state.stage = "game_trail_making"
-        st.rerun()
-
-# STAGE 2: GAME STAGE (街市接線遊戲 / Trail Making Game)
-elif st.session_state.stage == "game_trail_making":
-    text = "好棒！現在請幫店長整理一下街市的錢幣。請依照『1元硬幣 → 10元紙幣 → 2元硬幣 → 20元紙幣...』交錯連接！"
-    render_staff_npc(text, staff_type="cashier", staff_name="收銀員阿花")
-
-    # 隱藏式 Input 用於接受來自 iframe URL/JS 的資料
-    game1_res_raw = st.text_input("game1_result", key="game1_result_input", label_visibility="collapsed")
-
-    # 檢查 URL query params 是否有結果
-    query_params = st.query_params
-    if "game1_result" in query_params:
-        try:
-            res_str = query_params["game1_result"]
-            st.session_state.game1_data = json.loads(res_str)
-        except Exception as e:
-            pass
-    elif game1_res_raw:
-        try:
-            st.session_state.game1_data = json.loads(game1_res_raw)
-        except Exception as e:
-            pass
-
-    # 渲染連線遊戲 Component
-    components.html(GAME1_HTML, height=620, scrolling=False)
-
-    if st.session_state.game1_data:
-        st.success("✅ 已順利完成接線挑戰！")
-
-    if st.button("➡️ 去下一關 (Next Challenge)"):
-        st.session_state.stage = "naming_intro"
-        st.rerun()
-
-# STAGE 3.1: NAMING INTRO
-elif st.session_state.stage == "naming_intro":
-    text = "接線任務完成得好好！現在請協助店長辨認幾樣在超市內出現的特別物品。"
-    render_staff_npc(text, staff_type="manager")
-    render_instruction_speaker_component(text, "naming_intro")
-
-    if st.button("➡️ 開始辨認物品 (Start Naming Task)"):
-        st.session_state.stage = "naming_task"
-        st.session_state.current_item_index = 0
+def advance_naming_item():
+    if st.session_state.current_item_index + 1 < len(NAMING_ITEMS):
+        st.session_state.current_item_index += 1
         st.session_state.item_start_time = time.time()
-        st.rerun()
+    else:
+        st.session_state.stage = "delayed_recall_free"
+        st.session_state.item_start_time = time.time()
 
-# STAGE 3.2: NAMING TASK
-elif st.session_state.stage == "naming_task":
-    idx = st.session_state.current_item_index
-    item = NAMING_ITEMS[idx]
 
-    text = f"第 {idx + 1} 樣物品：{item['story']}。請問這是什麼？"
-    render_staff_npc(text, staff_type="assistant", staff_name="店員小傑")
+# ==========================================
+# GAME FLOW STAGES WITH IMMERSIVE GRAPHICS
+# ==========================================
 
+# --- STAGE 0: GAME 1 (接線遊戲) ---
+if st.session_state.stage == "game1":
     st.markdown(
-        f"""
-    <div class="market-shelf-card">
-        <span class="item-badge">物品 {idx + 1} / {len(NAMING_ITEMS)}</span><br>
-        <img src="{item['image_url']}" class="product-image" alt="Item Image"><br>
+        """
+    <div class="market-banner">
+        <h1 style="margin:0; font-size:32px; color:#FFFFFF !important;">🔌 第一關：街市接線遊戲</h1>
+        <p style="margin:5px 0 0 0; font-size:18px; opacity:0.9;">請按照指示將硬幣和紙幣交錯連接起來！</p>
     </div>
     """,
         unsafe_allow_html=True,
     )
 
-    render_mic_component(f"naming_{idx}")
+    # Check query params for result
+    query_params = st.query_params
+    if "game1_result" in query_params:
+        try:
+            st.session_state.game1_result = json.loads(query_params["game1_result"])
+        except Exception:
+            st.session_state.game1_result = query_params["game1_result"]
 
-    ans_input = st.text_input("請輸入或語音回答物品名稱：", key=f"naming_ans_{idx}")
+    components.html(GAME1_HTML, height=620, scrolling=False)
 
-    if st.button("➡️ 提交答案 (Submit Answer)"):
-        rt = round(time.time() - (st.session_state.item_start_time or time.time()), 2)
-        is_correct = any(syn in ans_input.strip() for syn in item["acceptable_synonyms"])
+    if st.button("➡️️ 去下一關"):
+        st.session_state.stage = "intro"
+        st.rerun()
 
-        if is_correct:
-            st.session_state.moca_naming_score += item["moca_weight"]
+# --- STAGE 1: GAME WELCOME ---
+elif st.session_state.stage == "intro":
+    st.markdown(
+        """
+    <div class="market-banner">
+        <h1 style="margin:0; font-size:36px; color:#FFFFFF !important;">🛒 超級市場大搜查</h1>
+        <p style="margin:5px 0 0 0; font-size:20px; opacity:0.9;">歡迎來到開心超市！今天讓我們一起完成購物任務吧！</p>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
 
-        st.session_state.telemetry_logs.append(
-            {
-                "item_id": item["id"],
-                "response": ans_input,
-                "is_correct": is_correct,
-                "response_time": rt,
-            }
-        )
+    render_staff_npc("早晨！歡迎光臨開心超市！今日超市有好多新鮮貨品，準備好你的購物籃出發吧！", staff_type="manager")
 
-        if idx + 1 < len(NAMING_ITEMS):
-            st.session_state.current_item_index += 1
-            st.session_state.item_start_time = time.time()
+    if st.button("出發 (Start Shopping)"):
+        st.session_state.stage = "memory_reg_1"
+        st.session_state.current_item_index = 0
+        st.session_state.telemetry_logs = []
+        st.session_state.moca_naming_score = 0
+        st.session_state.moca_memory_score = 0
+        st.rerun()
+
+# --- STAGE 2: SHOPPING LIST TRIAL 1 ---
+elif st.session_state.stage == "memory_reg_1":
+    inst_1 = "請聽清楚超市廣播的 5 個詞語，聽完後講出你記得的。"
+
+    st.markdown(
+        """
+    <div class="market-banner">
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">📝 第一站：觀察四周事物 (1/2)</h1>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    render_staff_npc(inst_1, staff_type="manager")
+    render_instruction_speaker_component(inst_1, "reg_1_inst")
+
+    word_names = [item["name"] for item in MEMORY_ITEMS]
+
+    col_audio, col_mic = st.columns(2)
+    with col_audio:
+        render_audio_speaker_component(word_names, "reg_1")
+    with col_mic:
+        render_mic_component("reg_1", continuous_mode=True)
+
+    with st.form(key="form_reg_1"):
+        user_answer = st.text_input("記得的詞語：", key="input_reg_1")
+        if st.form_submit_button("👉 記好了，下一步"):
+            spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
+            st.session_state.reg_trial_1_items = spoken
+            st.session_state.stage = "memory_reg_2"
             st.rerun()
-        else:
-            st.session_state.stage = "mem_recall_free"
+
+# --- STAGE 3: SHOPPING LIST TRIAL 2 ---
+elif st.session_state.stage == "memory_reg_2":
+    inst_2 = "超市廣播會再播一次，請再次講出記得的東西（包括剛才講過的）。"
+
+    st.markdown(
+        """
+    <div class="market-banner">
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">📝 第一站：觀察四周事物 (2/2)</h1>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    render_staff_npc(inst_2, staff_type="manager")
+    render_instruction_speaker_component(inst_2, "reg_2_inst")
+
+    word_names = [item["name"] for item in MEMORY_ITEMS]
+
+    col_audio, col_mic = st.columns(2)
+    with col_audio:
+        render_audio_speaker_component(word_names, "reg_2")
+    with col_mic:
+        render_mic_component("reg_2", continuous_mode=True)
+
+    with st.form(key="form_reg_2"):
+        user_answer = st.text_input("記得的詞語：", key="input_reg_2")
+        if st.form_submit_button("👉 記好了，進入超市"):
+            spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
+            st.session_state.reg_trial_2_items = spoken
+            st.session_state.stage = "memory_reg_notice"
             st.rerun()
 
-# STAGE 4.1: MEMORY FREE RECALL
-elif st.session_state.stage == "mem_recall_free":
-    text = "逛完超市啦！還記得剛才一開始廣播中需要購買的 5 樣物品嗎？請盡量說出或填寫出來："
-    render_staff_npc(text, staff_type="manager")
-    render_instruction_speaker_component(text, "mem_recall_free")
+# --- STAGE 4: SHOPPING MEMO NOTICE PAGE ---
+elif st.session_state.stage == "memory_reg_notice":
+    inst_notice = "請緊記剛才這 5 樣東西！稍後去結帳時，需要重覆講出廣播提到的字！"
 
-    render_mic_component("recall_free", continuous_mode=True)
+    st.markdown(
+        """
+    <div class="market-banner" style="background: linear-gradient(135deg, #FF9800 0%, #E65100 100%);">
+        <h1 style="margin:0; font-size:32px; color:#FFFFFF !important;">📌 店長特別提醒</h1>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
 
-    free_input = st.text_input("請輸入或語音回答記得的物品 (空格隔開)：", key="free_recall_input")
+    render_staff_npc("請緊記剛才這 5 樣東西！稍後去結帳時，需要重覆講出廣播提到的字！", staff_type="manager")
+    render_instruction_speaker_component(inst_notice, "notice_inst")
 
-    if st.button("➡️ 提交自由回想答案"):
-        recalled = [
-            w.strip() for w in free_input.replace("，", " ").replace(",", " ").split() if w.strip()
-        ]
-        st.session_state.recalled_free_items = recalled
+    if st.button("👉 明白，開始逛超市！"):
+        st.session_state.stage = "naming"
+        st.session_state.current_item_index = 0
+        st.session_state.item_start_time = time.time()
+        st.rerun()
 
-        target_names = [m["name"] for m in MEMORY_ITEMS]
-        missed = [m for m in MEMORY_ITEMS if m["name"] not in recalled]
-        st.session_state.missed_items = missed
-        st.session_state.moca_memory_score = len(target_names) - len(missed)
+# --- STAGE 5: NAMING GAME (EXPLORING MARKET STALLS WITH GRAPHICS) ---
+elif st.session_state.stage == "naming":
+    index = st.session_state.current_item_index
+    item = NAMING_ITEMS[index]
+    inst_naming = f"{item['story']}，請問這是什麼？"
 
-        if missed:
-            st.session_state.stage = "mem_recall_cued"
+    st.markdown(
+        f"""
+    <div class="market-banner">
+        <h1 style="margin:0; font-size:28px; color:#FFFFFF !important;">🔍 第二站：探索超市 ({index+1}/{len(NAMING_ITEMS)})</h1>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    # 1. Store Staff Speaks to Patient via Avatar & Speech Bubble
+    render_staff_npc(f"{item['story']}，請問這是什麼？", staff_type="assistant", staff_name="店員小花")
+    render_instruction_speaker_component(inst_naming, f"naming_{index}_inst")
+
+    # 2. Market Shelf Visual Display Container
+    st.markdown(
+        f"""
+    <div class="market-shelf-card">
+        <img src="{item['image_url']}" class="product-image" alt="Supermarket Item">
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    render_mic_component(f"naming_{index}", continuous_mode=False)
+
+    with st.form(key=f"naming_form_{index}"):
+        user_answer = st.text_input("這是...", key=f"user_input_{index}")
+        submit_btn = st.form_submit_button("👉 下一步")
+
+        if submit_btn:
+            recorded_answer = user_answer.strip() if user_answer.strip() else "跳過"
+            evaluate_naming_answer(recorded_answer)
+            advance_naming_item()
+            st.rerun()
+
+# --- STAGE 6: CHECKOUT COUNTER (FREE RECALL) ---
+elif st.session_state.stage == "delayed_recall_free":
+    inst_free = "歡迎來到結帳處！請講出最開始廣播的 5 樣東西"
+
+    st.markdown(
+        """
+    <div class="market-banner">
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">💵 第三站：結帳</h1>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    render_staff_npc("歡迎來到結帳處！請講出最開始廣播的 5 樣東西", staff_type="cashier", staff_name="收銀員阿輝")
+    render_instruction_speaker_component(inst_free, "free_recall_inst")
+
+    render_mic_component("delayed_free", continuous_mode=True)
+
+    with st.form(key="form_delayed_free"):
+        user_answer = st.text_input("講出詞語：", key="input_delayed_free")
+        if st.form_submit_button("👉 完成 (Done)"):
+            elapsed = round(time.time() - st.session_state.item_start_time, 2)
+            recalled = []
+            score = 0
+
+            for item in MEMORY_ITEMS:
+                if item["name"] in user_answer:
+                    recalled.append(item["name"])
+                    score += 1
+
+            st.session_state.recalled_free_items = recalled
+            st.session_state.moca_memory_score = score
+
+            st.session_state.telemetry_logs.append(
+                {
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "task": "delayed_recall_free",
+                    "score_awarded": score,
+                    "recalled_items": recalled,
+                    "latency_seconds": elapsed,
+                }
+            )
+
+            missed = [item for item in MEMORY_ITEMS if item["name"] not in recalled]
+            st.session_state.missed_items = missed
             st.session_state.cued_current_index = 0
             st.session_state.cued_sub_step = "category"
-        else:
-            st.session_state.stage = "report"
+
+            if missed:
+                st.session_state.stage = "delayed_recall_cued_step"
+            else:
+                st.session_state.stage = "complete"
+            st.rerun()
+
+# --- STAGE 7: AISLE ASSISTANT (CUED RECALL) ---
+elif st.session_state.stage == "delayed_recall_cued_step":
+    missed_list = st.session_state.missed_items
+    curr_idx = st.session_state.cued_current_index
+
+    if curr_idx >= len(missed_list):
+        st.session_state.stage = "complete"
         st.rerun()
 
-# STAGE 4.2: MEMORY CUED RECALL
-elif st.session_state.stage == "mem_recall_cued":
-    missed = st.session_state.missed_items
-    c_idx = st.session_state.cued_current_index
-    item = missed[c_idx]
+    item = missed_list[curr_idx]
+
+    st.markdown(
+        """
+    <div class="market-banner" style="background: linear-gradient(135deg, #0288D1 0%, #01579B 100%);">
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">🔎 超市店員的協助</h1>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
 
     if st.session_state.cued_sub_step == "category":
-        text = f"其中有一樣物品是『{item['category']}』，你記得是什麼嗎？"
-        render_staff_npc(text, staff_type="manager")
+        inst_cue = f"讓我幫幫你！這東西屬於【{item['category']}】，請問你記得是什麼嗎？"
 
-        render_mic_component(f"cued_cat_{c_idx}")
-        cued_ans = st.text_input("請回答類別提示物品：", key=f"cued_cat_ans_{c_idx}")
+        render_staff_npc(f"讓我幫幫你！這東西屬於【{item['category']}】，請問你記得是什麼嗎？", staff_type="assistant", staff_name="店員小花")
+        render_instruction_speaker_component(inst_cue, f"cue_inst_{item['id']}")
+        render_mic_component(f"cue_cat_{item['id']}", continuous_mode=True)
 
-        if st.button("➡️ 提交類別提示答案"):
-            if item["name"] in cued_ans:
-                st.session_state.recalled_cued_items[item["id"]] = True
-                if c_idx + 1 < len(missed):
+        with st.form(key=f"form_cat_{item['id']}"):
+            user_spoken = st.text_input("請講出這樣東西：", key=f"in_cat_{item['id']}")
+            if st.form_submit_button("👉 確認"):
+                st.session_state.recalled_cued_items[item["name"]] = user_spoken.strip()
+                if item["name"] in user_spoken:
                     st.session_state.cued_current_index += 1
+                    st.session_state.cued_sub_step = "category"
                 else:
-                    st.session_state.stage = "report"
-            else:
-                st.session_state.recalled_cued_items[item["id"]] = False
-                st.session_state.cued_sub_step = "choice"
-            st.rerun()
+                    st.session_state.cued_sub_step = "choice"
+                st.rerun()
 
     elif st.session_state.cued_sub_step == "choice":
-        text = f"沒關係！請在下面選項中選出正確的物品："
-        render_staff_npc(text, staff_type="manager")
+        inst_choice = "這裏有三個選項，請選擇原本廣播的那一個。"
 
-        choice = st.radio("請選擇：", item["options"], key=f"choice_{c_idx}")
+        render_staff_npc("這裏有三個選項，請選擇原本廣播的那一個。", staff_type="assistant", staff_name="店員小花")
+        render_instruction_speaker_component(inst_choice, f"choice_inst_{item['id']}")
 
-        if st.button("➡️ 提交選擇題答案"):
-            st.session_state.recalled_choice_items[item["id"]] = choice == item["name"]
-            if c_idx + 1 < len(missed):
+        with st.form(key=f"form_choice_{item['id']}"):
+            selected_option = st.radio(
+                "請點選正確選項：",
+                options=item["options"],
+                key=f"radio_choice_{item['id']}",
+            )
+            if st.form_submit_button("👉 繼續"):
+                st.session_state.recalled_choice_items[item["name"]] = selected_option
                 st.session_state.cued_current_index += 1
                 st.session_state.cued_sub_step = "category"
-            else:
-                st.session_state.stage = "report"
-            st.rerun()
+                st.rerun()
 
-# STAGE 5: REPORT & SUMMARY
-elif st.session_state.stage == "report":
+# --- STAGE 8: GAME COMPLETE & BACKGROUND CLINICAL DASHBOARD ---
+elif st.session_state.stage == "complete":
     st.balloons()
-    text = "太棒了！你已經完成了今天所有的超級市場大搜查任務！這是你的測驗總結報告："
-    render_staff_npc(text, staff_type="manager")
 
-    st.markdown("### 📊 搜查任務評估報告 Summary Report")
+    st.markdown(
+        """
+    <div class="market-banner">
+        <h1 style="margin:0; font-size:36px; color:#FFFFFF !important;">🎉 成功完成購物！</h1>
+        <p style="margin:5px 0 0 0; font-size:20px;">多謝惠顧！你已順利買齊所有物品並完成結帳！</p>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("命名能力得分 (MoCA Naming)", f"{st.session_state.moca_naming_score} / 3")
-    with col2:
-        st.metric("自由回想得分 (MoCA Memory)", f"{st.session_state.moca_memory_score} / 5")
+    render_staff_npc("恭喜你！買齊所有東西了，歡迎下次再來開心超市購物！", staff_type="manager")
 
-    st.markdown("---")
-    st.markdown("#### 🎮 街市接線遊戲結果 Game 1 Result")
-    g1 = st.session_state.game1_data
-    if g1:
-        st.json(g1)
-    else:
-        st.write("未取得遊戲數據。")
-
-    st.markdown("---")
-    st.markdown("#### 📋 物品命名反應數據 Naming Response Logs")
-    df_logs = pd.DataFrame(st.session_state.telemetry_logs)
-    st.dataframe(df_logs, use_container_width=True)
-
-    if st.button("🔄 重新開始新體驗 (Restart Adventure)"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
+    if st.button("🔄 再玩一次 (Play Again)"):
+        st.session_state.stage = "game1"
+        st.session_state.game1_result = None
+        st.session_state.current_item_index = 0
+        st.session_state.telemetry_logs = []
+        st.session_state.moca_naming_score = 0
+        st.session_state.moca_memory_score = 0
+        st.session_state.reg_trial_1_items = []
+        st.session_state.reg_trial_2_items = []
+        st.session_state.recalled_free_items = []
+        st.session_state.missed_items = []
+        st.session_state.cued_current_index = 0
+        st.session_state.cued_sub_step = "category"
+        st.session_state.recalled_cued_items = {}
+        st.session_state.recalled_choice_items = {}
         st.rerun()
+
+    # Backend Dashboard for OT/ST Assessment
+    with st.expander("🩺 Occupational Therapist / Speech Telemetry Dashboard", expanded=False):
+        st.subheader("Game 1 (接線遊戲) Result")
+        st.write(st.session_state.game1_result if st.session_state.game1_result else "No result recorded.")
+
+        st.subheader("MoCA Sub-score Summary")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("1. Naming Sub-score", f"{st.session_state.moca_naming_score} / 3 Points")
+        with col2:
+            st.metric("2. Delayed Recall (Free)", f"{st.session_state.moca_memory_score} / 5 Points")
+        with col3:
+            total = st.session_state.moca_naming_score + st.session_state.moca_memory_score
+            st.metric("Combined MoCA Sub-total", f"{total} / 8 Points")
+
+        st.subheader("Memory Breakdown")
+        st.write(
+            f"**Registration Trial 1 Spoken:** {', '.join(st.session_state.reg_trial_1_items) if st.session_state.reg_trial_1_items else 'None'}"
+        )
+        st.write(
+            f"**Registration Trial 2 Spoken:** {', '.join(st.session_state.reg_trial_2_items) if st.session_state.reg_trial_2_items else 'None'}"
+        )
+        st.write(
+            f"**Free Recall (Scored):** {', '.join(st.session_state.recalled_free_items) if st.session_state.recalled_free_items else 'None'}"
+        )
+
+        if st.session_state.recalled_cued_items or st.session_state.recalled_choice_items:
+            st.write("**Cued / Multiple-Choice Analysis (Encoding vs Retrieval Deficit Analysis):**")
+            st.json(
+                {
+                    "Category_Cues": st.session_state.recalled_cued_items,
+                    "Multiple_Choices": st.session_state.recalled_choice_items,
+                }
+            )
+
+        df = pd.DataFrame(st.session_state.telemetry_logs)
+        st.dataframe(df)
+        if not df.empty:
+            st.download_button(
+                "📥 Download Clinical Telemetry Log (.CSV)",
+                df.to_csv(index=False).encode("utf-8"),
+                f"moca_cantonese_speech_telemetry_{int(time.time())}.csv",
+                "text/csv",
+            )
