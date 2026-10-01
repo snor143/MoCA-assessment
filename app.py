@@ -327,13 +327,17 @@ function cross(o, a, b) {
   return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
 }
 
-function segmentsIntersect(a, b, c, d) {
-  const d1 = cross(c, d, a);
-  const d2 = cross(c, d, b);
-  const d3 = cross(a, b, c);
-  const d4 = cross(a, b, d);
-  return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
-         ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+function segmentsIntersect(p1, p2, p3, p4) {
+  const d1 = cross(p3, p4, p1);
+  const d2 = cross(p3, p4, p2);
+  const d3 = cross(p1, p2, p3);
+  const d4 = cross(p1, p2, p4);
+
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+      ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+    return true;
+  }
+  return false;
 }
 
 function itemCenter(item) {
@@ -346,22 +350,52 @@ function isInsideItem(px, py, item) {
   return Math.hypot(px - c.x, py - c.y) <= r;
 }
 
-function willCrossExisting(from, to) {
-  const a = itemCenter(from);
-  const b = itemCenter(to);
+// Precise check for drawn path intersections
+function checkPathCrossings(currentPath) {
+  if (!currentPath || currentPath.length < 2) return false;
 
-  for (const conn of state.connections) {
-    if (conn.from === from.id || conn.to === from.id) continue;
-    if (conn.from === to.id || conn.to === to.id) continue;
+  // 1. Check self-intersection of current path
+  for (let i = 0; i < currentPath.length - 3; i++) {
+    const a1 = { x: currentPath[i][0], y: currentPath[i][1] };
+    const a2 = { x: currentPath[i + 1][0], y: currentPath[i + 1][1] };
 
-    const c = state.items.find(x => x.id === conn.from);
-    const d = state.items.find(x => x.id === conn.to);
-    if (!c || !d) continue;
+    for (let j = i + 2; j < currentPath.length - 1; j++) {
+      if (i === 0 && j === currentPath.length - 2) continue; // ignore adjacent
+      const b1 = { x: currentPath[j][0], y: currentPath[j][1] };
+      const b2 = { x: currentPath[j + 1][0], y: currentPath[j + 1][1] };
 
-    if (segmentsIntersect(a, b, itemCenter(c), itemCenter(d))) {
-      return true;
+      if (segmentsIntersect(a1, a2, b1, b2)) return true;
     }
   }
+
+  // 2. Check intersection against previously drawn connection paths
+  for (const conn of state.connections) {
+    const prevPath = conn.pathPoints;
+    if (!prevPath || prevPath.length < 2) continue;
+
+    for (let i = 0; i < currentPath.length - 1; i++) {
+      const a1 = { x: currentPath[i][0], y: currentPath[i][1] };
+      const a2 = { x: currentPath[i + 1][0], y: currentPath[i + 1][1] };
+
+      for (let j = 0; j < prevPath.length - 1; j++) {
+        const b1 = { x: prevPath[j][0], y: prevPath[j][1] };
+        const b2 = { x: prevPath[j + 1][0], y: prevPath[j + 1][1] };
+
+        // Skip end-point touching from adjacent connections
+        const isEndpointTouch = (Math.hypot(a1.x - b1.x, a1.y - b1.y) < 15) ||
+                                (Math.hypot(a1.x - b2.x, a1.y - b2.y) < 15) ||
+                                (Math.hypot(a2.x - b1.x, a2.y - b1.y) < 15) ||
+                                (Math.hypot(a2.x - b2.x, a2.y - b2.y) < 15);
+
+        if (isEndpointTouch) continue;
+
+        if (segmentsIntersect(a1, a2, b1, b2)) {
+          return true;
+        }
+      }
+    }
+  }
+
   return false;
 }
 
@@ -568,7 +602,11 @@ function onItemPointerDown(e) {
 
 function onPointerMove(e) {
   if (state.dragging && state.currentPath) {
-    state.currentPath.push([e.clientX, e.clientY]);
+    const rect = document.getElementById("game-wrap").getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    state.currentPath.push([x, y]);
 
     const path = document.getElementById("live-path");
     if (path) {
@@ -613,15 +651,29 @@ function onPointerUp(e) {
 
 function makeConnection(from, to, startTime) {
   const time = (performance.now() - startTime) / 1000;
-  const crosses = willCrossExisting(from, to);
+  
+  // Snap target center as last point of drawn path
+  const targetC = itemCenter(to);
+  state.currentPath.push([targetC.x, targetC.y]);
+
+  const crosses = checkPathCrossings(state.currentPath);
 
   const livePath = document.getElementById("live-path");
   if (livePath) {
+    const snapD = "M " + state.currentPath.map(p => `${p[0]} ${p[1]}`).join(" L ");
+    livePath.setAttribute("d", snapD);
     livePath.id = "";
     livePath.classList.add("permanent-line");
   }
 
-  state.connections.push({ from: from.id, to: to.id, time, crosses });
+  state.connections.push({
+    from: from.id,
+    to: to.id,
+    time,
+    crosses,
+    pathPoints: [...state.currentPath]
+  });
+
   from.connectedFrom = true;
   to.connectedTo = true;
   from.el.classList.add("connected");
@@ -638,6 +690,8 @@ function makeConnection(from, to, startTime) {
 
     const isOrderCorrect = JSON.stringify(seq) === JSON.stringify(CORRECT_SEQUENCE);
     const hasCrossing = state.connections.some(c => c.crosses);
+    
+    // Strict MoCA Criterion: Score 1 ONLY IF sequence is correct AND no crossings exist
     const isCorrect = isOrderCorrect && !hasCrossing;
     const duration = (performance.now() - state.startTime) / 1000;
 
@@ -842,7 +896,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Initialize Session State (Set stage default to "intro" for Front Page)
+# Initialize Session State
 for key, value in {
     "stage": "intro",
     "game1_result": None,
@@ -1210,7 +1264,7 @@ def advance_naming_item():
 # GAME FLOW STAGES
 # ==========================================
 
-# --- STAGE 1: FRONT WELCOME PAGE (MOST BEGINNING) ---
+# --- STAGE 1: FRONT WELCOME PAGE ---
 if st.session_state.stage == "intro":
     st.markdown(
         """
@@ -1240,7 +1294,6 @@ elif st.session_state.stage == "game1":
         unsafe_allow_html=True,
     )
 
-    # Check query params for result
     query_params = st.query_params
     if "game1_result" in query_params:
         try:
@@ -1531,7 +1584,7 @@ elif st.session_state.stage == "delayed_recall_cued_step":
                         "target_name": item["name"],
                         "user_response": user_spoken,
                         "is_correct": is_correct,
-                        "score_awarded": 0,  # MoCA guidelines: Cued recall does not yield points for total MoCA
+                        "score_awarded": 0,
                         "latency_seconds": 0.0,
                         "notes": f"Category Cue Provided: {item['category']}",
                     }
@@ -1568,7 +1621,7 @@ elif st.session_state.stage == "delayed_recall_cued_step":
                         "target_name": item["name"],
                         "user_response": selected_option,
                         "is_correct": is_correct,
-                        "score_awarded": 0,  # MoCA guidelines: Multiple choice does not yield points for total MoCA
+                        "score_awarded": 0,
                         "latency_seconds": 0.0,
                         "notes": f"Options: {', '.join(item['options'])}",
                     }
