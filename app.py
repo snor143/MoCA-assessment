@@ -705,7 +705,7 @@ window.addEventListener("resize", () => {
 </html>
 """
 
-# --- METHOD 1: VISUAL CSS & SUPERMARKET IMMERSION STYLING ---
+# --- VISUAL CSS & SUPERMARKET IMMERSION STYLING ---
 st.markdown(
     """
 <style>
@@ -835,9 +835,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Initialize Session State
+# Initialize Session State (Set stage default to "intro" for Front Page)
 for key, value in {
-    "stage": "game1",
+    "stage": "intro",
     "game1_result": None,
     "current_item_index": 0,
     "telemetry_logs": [],
@@ -1197,10 +1197,10 @@ def advance_naming_item():
 
 
 # ==========================================
-# GAME FLOW STAGES WITH IMMERSIVE GRAPHICS
+# GAME FLOW STAGES
 # ==========================================
 
-# --- STAGE 0: GAME WELCOME ---
+# --- STAGE 1: FRONT WELCOME PAGE (MOST BEGINNING) ---
 if st.session_state.stage == "intro":
     st.markdown(
         """
@@ -1216,13 +1216,9 @@ if st.session_state.stage == "intro":
 
     if st.button("出發 (Start Shopping)"):
         st.session_state.stage = "game1"
-        st.session_state.current_item_index = 0
-        st.session_state.telemetry_logs = []
-        st.session_state.moca_naming_score = 0
-        st.session_state.moca_memory_score = 0
         st.rerun()
 
-# --- STAGE 1: GAME 1 (接線遊戲) ---
+# --- STAGE 2: GAME 1 (接線遊戲) ---
 elif st.session_state.stage == "game1":
     st.markdown(
         """
@@ -1244,19 +1240,22 @@ elif st.session_state.stage == "game1":
 
     components.html(GAME1_HTML, height=620, scrolling=False)
 
-    if st.button("➡️️ 去下一關"):
+    if st.button("➡️ 去下一關"):
         st.session_state.stage = "memory_reg_1"
+        st.session_state.current_item_index = 0
+        st.session_state.telemetry_logs = []
+        st.session_state.moca_naming_score = 0
+        st.session_state.moca_memory_score = 0
         st.rerun()
 
-
-# --- STAGE 2: SHOPPING LIST TRIAL 1 ---
+# --- STAGE 3: SHOPPING LIST TRIAL 1 ---
 elif st.session_state.stage == "memory_reg_1":
     inst_1 = "請聽清楚超市廣播的 5 個詞語，聽完後講出你記得的。"
 
     st.markdown(
         """
     <div class="market-banner">
-        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">📝 第一站：觀察四周事物 (1/2)</h1>
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">📝 第二站：觀察四周事物 (1/2)</h1>
     </div>
     """,
         unsafe_allow_html=True,
@@ -1281,14 +1280,14 @@ elif st.session_state.stage == "memory_reg_1":
             st.session_state.stage = "memory_reg_2"
             st.rerun()
 
-# --- STAGE 3: SHOPPING LIST TRIAL 2 ---
+# --- STAGE 4: SHOPPING LIST TRIAL 2 ---
 elif st.session_state.stage == "memory_reg_2":
     inst_2 = "超市廣播會再播一次，請再次講出記得的東西（包括剛才講過的）。"
 
     st.markdown(
         """
     <div class="market-banner">
-        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">📝 第一站：觀察四周事物 (2/2)</h1>
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">📝 第二站：觀察四周事物 (2/2)</h1>
     </div>
     """,
         unsafe_allow_html=True,
@@ -1313,7 +1312,7 @@ elif st.session_state.stage == "memory_reg_2":
             st.session_state.stage = "memory_reg_notice"
             st.rerun()
 
-# --- STAGE 4: SHOPPING MEMO NOTICE PAGE ---
+# --- STAGE 5: SHOPPING MEMO NOTICE PAGE ---
 elif st.session_state.stage == "memory_reg_notice":
     inst_notice = "請緊記剛才這 5 樣東西！稍後去結帳時，需要重覆講出廣播提到的字！"
 
@@ -1335,7 +1334,7 @@ elif st.session_state.stage == "memory_reg_notice":
         st.session_state.item_start_time = time.time()
         st.rerun()
 
-# --- STAGE 5: NAMING GAME (EXPLORING MARKET STALLS WITH GRAPHICS) ---
+# --- STAGE 6: NAMING GAME ---
 elif st.session_state.stage == "naming":
     index = st.session_state.current_item_index
     item = NAMING_ITEMS[index]
@@ -1344,17 +1343,15 @@ elif st.session_state.stage == "naming":
     st.markdown(
         f"""
     <div class="market-banner">
-        <h1 style="margin:0; font-size:28px; color:#FFFFFF !important;">🔍 第二站：探索超市 ({index+1}/{len(NAMING_ITEMS)})</h1>
+        <h1 style="margin:0; font-size:28px; color:#FFFFFF !important;">🔍 第三站：探索超市 ({index+1}/{len(NAMING_ITEMS)})</h1>
     </div>
     """,
         unsafe_allow_html=True,
     )
 
-    # 1. Store Staff Speaks to Patient via Avatar & Speech Bubble
     render_staff_npc(f"{item['story']}，請問這是什麼？", staff_type="assistant", staff_name="店員小花")
     render_instruction_speaker_component(inst_naming, f"naming_{index}_inst")
 
-    # 2. Market Shelf Visual Display Container
     st.markdown(
         f"""
     <div class="market-shelf-card">
@@ -1376,14 +1373,14 @@ elif st.session_state.stage == "naming":
             advance_naming_item()
             st.rerun()
 
-# --- STAGE 6: CHECKOUT COUNTER (FREE RECALL) ---
+# --- STAGE 7: CHECKOUT COUNTER (FREE RECALL) ---
 elif st.session_state.stage == "delayed_recall_free":
     inst_free = "歡迎來到結帳處！請講出最開始廣播的 5 樣東西"
 
     st.markdown(
         """
     <div class="market-banner">
-        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">💵 第三站：結帳</h1>
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">💵 第四站：結帳</h1>
     </div>
     """,
         unsafe_allow_html=True,
@@ -1430,7 +1427,7 @@ elif st.session_state.stage == "delayed_recall_free":
                 st.session_state.stage = "complete"
             st.rerun()
 
-# --- STAGE 7: AISLE ASSISTANT (CUED RECALL) ---
+# --- STAGE 8: AISLE ASSISTANT (CUED RECALL) ---
 elif st.session_state.stage == "delayed_recall_cued_step":
     missed_list = st.session_state.missed_items
     curr_idx = st.session_state.cued_current_index
@@ -1486,7 +1483,7 @@ elif st.session_state.stage == "delayed_recall_cued_step":
                 st.session_state.cued_sub_step = "category"
                 st.rerun()
 
-# --- STAGE 8: GAME COMPLETE & BACKGROUND CLINICAL DASHBOARD ---
+# --- STAGE 9: GAME COMPLETE & DASHBOARD ---
 elif st.session_state.stage == "complete":
     st.balloons()
 
@@ -1503,7 +1500,7 @@ elif st.session_state.stage == "complete":
     render_staff_npc("恭喜你！買齊所有東西了，歡迎下次再來開心超市購物！", staff_type="manager")
 
     if st.button("🔄 再玩一次 (Play Again)"):
-        st.session_state.stage = "game1"
+        st.session_state.stage = "intro"
         st.session_state.game1_result = None
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
