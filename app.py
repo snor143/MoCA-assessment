@@ -1215,7 +1215,7 @@ if st.session_state.stage == "intro":
     render_staff_npc("早晨！歡迎光臨開心超市！今日超市有好多新鮮貨品，準備好你的購物籃出發吧！", staff_type="manager")
 
     if st.button("出發 (Start Shopping)"):
-        st.session_state.stage = "memory_reg_1"
+        st.session_state.stage = "game1"
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
         st.session_state.moca_naming_score = 0
@@ -1245,7 +1245,7 @@ elif st.session_state.stage == "game1":
     components.html(GAME1_HTML, height=620, scrolling=False)
 
     if st.button("➡️️ 去下一關"):
-        st.session_state.stage = "intro"
+        st.session_state.stage = "memory_reg_1"
         st.rerun()
 
 
