@@ -1201,7 +1201,7 @@ def advance_naming_item():
 # ==========================================
 
 # --- STAGE 0: GAME WELCOME ---
-elif st.session_state.stage == "intro":
+if st.session_state.stage == "intro":
     st.markdown(
         """
     <div class="market-banner">
@@ -1223,7 +1223,7 @@ elif st.session_state.stage == "intro":
         st.rerun()
 
 # --- STAGE 1: GAME 1 (接線遊戲) ---
-if st.session_state.stage == "game1":
+elif st.session_state.stage == "game1":
     st.markdown(
         """
     <div class="market-banner">
