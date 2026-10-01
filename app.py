@@ -1200,7 +1200,29 @@ def advance_naming_item():
 # GAME FLOW STAGES WITH IMMERSIVE GRAPHICS
 # ==========================================
 
-# --- STAGE 0: GAME 1 (接線遊戲) ---
+# --- STAGE 0: GAME WELCOME ---
+elif st.session_state.stage == "intro":
+    st.markdown(
+        """
+    <div class="market-banner">
+        <h1 style="margin:0; font-size:36px; color:#FFFFFF !important;">🛒 超級市場大搜查</h1>
+        <p style="margin:5px 0 0 0; font-size:20px; opacity:0.9;">歡迎來到開心超市！今天讓我們一起完成購物任務吧！</p>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    render_staff_npc("早晨！歡迎光臨開心超市！今日超市有好多新鮮貨品，準備好你的購物籃出發吧！", staff_type="manager")
+
+    if st.button("出發 (Start Shopping)"):
+        st.session_state.stage = "memory_reg_1"
+        st.session_state.current_item_index = 0
+        st.session_state.telemetry_logs = []
+        st.session_state.moca_naming_score = 0
+        st.session_state.moca_memory_score = 0
+        st.rerun()
+
+# --- STAGE 1: GAME 1 (接線遊戲) ---
 if st.session_state.stage == "game1":
     st.markdown(
         """
@@ -1226,27 +1248,6 @@ if st.session_state.stage == "game1":
         st.session_state.stage = "intro"
         st.rerun()
 
-# --- STAGE 1: GAME WELCOME ---
-elif st.session_state.stage == "intro":
-    st.markdown(
-        """
-    <div class="market-banner">
-        <h1 style="margin:0; font-size:36px; color:#FFFFFF !important;">🛒 超級市場大搜查</h1>
-        <p style="margin:5px 0 0 0; font-size:20px; opacity:0.9;">歡迎來到開心超市！今天讓我們一起完成購物任務吧！</p>
-    </div>
-    """,
-        unsafe_allow_html=True,
-    )
-
-    render_staff_npc("早晨！歡迎光臨開心超市！今日超市有好多新鮮貨品，準備好你的購物籃出發吧！", staff_type="manager")
-
-    if st.button("出發 (Start Shopping)"):
-        st.session_state.stage = "memory_reg_1"
-        st.session_state.current_item_index = 0
-        st.session_state.telemetry_logs = []
-        st.session_state.moca_naming_score = 0
-        st.session_state.moca_memory_score = 0
-        st.rerun()
 
 # --- STAGE 2: SHOPPING LIST TRIAL 1 ---
 elif st.session_state.stage == "memory_reg_1":
