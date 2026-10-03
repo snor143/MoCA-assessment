@@ -785,6 +785,7 @@ GAME2_HTML = """<!DOCTYPE html>
   border: 4px dashed #7A1F1F;
   border-radius: 14px;
   position: relative;
+  overflow: hidden
   box-shadow: inset 0 2px 8px rgba(90,21,21,0.1);
   min-height: 320px; /* Give it a concrete minimum height */
 }
@@ -809,12 +810,15 @@ GAME2_HTML = """<!DOCTYPE html>
   }
 
   #footer {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  z-index: 10;
+}
   .btn {
     font-family: inherit;
     font-size: 22px;
