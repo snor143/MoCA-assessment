@@ -743,7 +743,7 @@ GAME2_HTML = """<!DOCTYPE html>
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: 100%;
+    height: 120%;
     padding: 10px;
     gap: 8px;
   }
@@ -758,7 +758,7 @@ GAME2_HTML = """<!DOCTYPE html>
     align-items: center;
     height: 28%;
     min-height: 120px;
-    max-height: 180px;
+    max-height: 160px;
     position: relative;
     flex-shrink: 0;
   }
