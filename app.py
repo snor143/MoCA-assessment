@@ -789,10 +789,6 @@ GAME2_HTML = """<!DOCTYPE html>
   overflow: visible; 
   box-shadow: inset 0 2px 8px rgba(90,21,21,0.1);
   min-height: 0;
-  
-  /* ADD: Leave space at the bottom inside the yellow box for buttons */
-  padding-bottom: 10px; 
-}
 
   #canvas-wrap::before {
     content: "✏️ 喺呢度畫";
