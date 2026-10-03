@@ -740,14 +740,15 @@ GAME2_HTML = """<!DOCTYPE html>
   }
 
   #wrap {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 120%;
-    padding: 10px;
-    gap: 8px;
-  }
-
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  padding: 16px;
+  gap: 12px;
+  background: #FFF8E7; /* Outer card background */
+  border-radius: 16px;
+}
   #reference {
     background: linear-gradient(180deg, #FFF8E7, #F5E6C8);
     border: 4px solid #7A1F1F;
