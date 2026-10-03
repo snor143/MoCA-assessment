@@ -1717,9 +1717,6 @@ elif st.session_state.stage == "game2":
         f"""
     <div class="game-instruction-card">
         <div class="game-instruction-title">💡 遊戲指引</div>
-        <div class="game-instruction-text">
-            🧺 阿婆話：「{game2_instruction_text}」
-        </div>
     </div>
     """,
         unsafe_allow_html=True,
