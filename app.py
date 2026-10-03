@@ -779,16 +779,15 @@ GAME2_HTML = """<!DOCTYPE html>
     max-height: 100%;
   }
 
-#canvas-wrap {
+  #canvas-wrap {
   flex: 1;
   background: #FFFEF8;
   border: 4px dashed #7A1F1F;
   border-radius: 14px;
   position: relative;
-  /* CHANGE: Remove overflow: hidden so buttons aren't clipped if they overlap */
-  overflow: visible; 
   box-shadow: inset 0 2px 8px rgba(90,21,21,0.1);
-  min-height: 0;
+  min-height: 320px; /* Give it a concrete minimum height */
+}
 
   #canvas-wrap::before {
     content: "✏️ 喺呢度畫";
