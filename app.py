@@ -758,7 +758,7 @@ GAME2_HTML = """<!DOCTYPE html>
     align-items: center;
     height: 28%;
     min-height: 120px;
-    max-height: 160px;
+    max-height: 180px;
     position: relative;
     flex-shrink: 0;
   }
