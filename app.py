@@ -739,14 +739,26 @@ GAME2_HTML = """<!DOCTYPE html>
     font-size: 24px;
   }
 
-  #wrap {
+#wrap {
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding: 16px;
-  gap: 12px;
-  background: #FFF8E7; /* Outer card background */
-  border-radius: 16px;
+  height: 100%;
+  padding: 10px 10px 20px 10px; /* Extra bottom padding */
+  gap: 8px;
+}
+
+#canvas-wrap {
+  /* Replace flex: 1 with a calc height so buttons stay visible on screen */
+  height: calc(100% - 220px); 
+  flex: none;
+  background: #FFFEF8;
+  border: 4px dashed #7A1F1F;
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 2px 8px rgba(90,21,21,0.1);
+}
 }
   #reference {
     background: linear-gradient(180deg, #FFF8E7, #F5E6C8);
@@ -779,17 +791,6 @@ GAME2_HTML = """<!DOCTYPE html>
     max-height: 100%;
   }
 
-  #canvas-wrap {
-  flex: 1;
-  background: #FFFEF8;
-  border: 4px dashed #7A1F1F;
-  border-radius: 14px;
-  position: relative;
-  overflow: hidden
-  box-shadow: inset 0 2px 8px rgba(90,21,21,0.1);
-  min-height: 320px; /* Give it a concrete minimum height */
-}
-
   #canvas-wrap::before {
     content: "✏️ 喺呢度畫";
     position: absolute;
@@ -810,15 +811,12 @@ GAME2_HTML = """<!DOCTYPE html>
   }
 
   #footer {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  z-index: 10;
-}
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  
   .btn {
     font-family: inherit;
     font-size: 22px;
