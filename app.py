@@ -791,7 +791,7 @@ GAME2_HTML = """<!DOCTYPE html>
   min-height: 0;
   
   /* ADD: Leave space at the bottom inside the yellow box for buttons */
-  padding-bottom: 60px; 
+  padding-bottom: 10px; 
 }
 
   #canvas-wrap::before {
