@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# --- GAME 1 HTML CODE ---
+# --- GAME 1 HTML CODE (Coin Connect) ---
 GAME1_HTML = """<!DOCTYPE html>
 <html lang="zh-HK">
 <head>
@@ -225,22 +225,6 @@ function injectValueIntoStreamlitWidget(text) {
     console.log("✅ 已寫入 URL：", currentUrl.toString());
   } catch (e) {
     console.log("❌ URL 寫入失敗：", e);
-    try {
-      const doc = window.parent.document;
-      const inputs = doc.querySelectorAll('input[type="text"], textarea');
-      if (inputs.length > 0) {
-        const target = inputs[0];
-        const setter = Object.getOwnPropertyDescriptor(
-          window.HTMLInputElement.prototype, "value"
-        ).set;
-        setter.call(target, text);
-        target.dispatchEvent(new Event("input", { bubbles: true }));
-        target.dispatchEvent(new Event("change", { bubbles: true }));
-        console.log("✅ Fallback：已注入 text_input");
-      }
-    } catch (e2) {
-      console.log("❌ Fallback 都失敗：", e2);
-    }
   }
 }
 
@@ -738,6 +722,389 @@ window.addEventListener("resize", () => {
 </html>
 """
 
+# --- GAME 2 HTML CODE (Basket Drawing Game) ---
+GAME2_HTML = """<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<title>畫購物籃</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: "Noto Sans TC", "PingFang HK", sans-serif;
+    background: #F5E6C8;
+    color: #2B1A08;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-size: 24px;
+  }
+
+  #wrap {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    padding: 10px;
+    gap: 8px;
+  }
+
+  #prompt {
+    background: linear-gradient(180deg, #A83232, #7A1F1F);
+    color: #F5E6C8;
+    padding: 12px 20px;
+    border-radius: 14px;
+    border: 3px solid #D4A017;
+    font-size: 20px;
+    font-weight: 700;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(90,21,21,0.3);
+    flex-shrink: 0;
+  }
+
+  #reference {
+    background: linear-gradient(180deg, #FFF8E7, #F5E6C8);
+    border: 4px solid #7A1F1F;
+    border-radius: 14px;
+    padding: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 28%;
+    min-height: 120px;
+    max-height: 160px;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  #reference::before {
+    content: "📖 參考圖";
+    position: absolute;
+    top: 6px;
+    left: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #7A1F1F;
+    opacity: 0.7;
+  }
+
+  #reference svg {
+    height: 100%;
+    max-height: 100%;
+  }
+
+  #canvas-wrap {
+    flex: 1;
+    background: #FFFEF8;
+    border: 4px dashed #7A1F1F;
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 2px 8px rgba(90,21,21,0.1);
+    min-height: 0;
+  }
+
+  #canvas-wrap::before {
+    content: "✏️ 喺呢度畫";
+    position: absolute;
+    top: 6px;
+    left: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #7A1F1F;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  #canvas {
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  #footer {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .btn {
+    font-family: inherit;
+    font-size: 22px;
+    font-weight: 800;
+    padding: 12px 28px;
+    border: 4px solid #5A1515;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #A83232, #7A1F1F);
+    color: #F5E6C8;
+    cursor: pointer;
+    min-width: 140px;
+    box-shadow: 0 4px 0 #5A1515, 0 6px 12px rgba(90,21,21,0.3);
+  }
+
+  .btn:hover {
+    background: linear-gradient(180deg, #F0C952, #D4A017);
+    color: #2B1A08;
+    transform: translateY(-2px);
+  }
+
+  .btn.secondary {
+    background: linear-gradient(180deg, #F5E6C8, #E8D4A8);
+    color: #7A1F1F;
+    box-shadow: 0 4px 0 #7A1F1F, 0 6px 12px rgba(90,21,21,0.2);
+  }
+
+  .btn:disabled {
+    background: #C9B99A;
+    border-color: #8A7A58;
+    color: #6A5A40;
+    cursor: not-allowed;
+    box-shadow: 0 4px 0 #8A7A58;
+  }
+
+  #done-panel {
+    position: fixed;
+    inset: 0;
+    background: rgba(42,24,16,0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 999999;
+    padding: 24px;
+  }
+
+  #done-panel.show { display: flex !important; }
+
+  #done-card {
+    background: linear-gradient(180deg, #F5E6C8, #E8D4A8);
+    border: 6px solid #7A1F1F;
+    border-radius: 24px;
+    padding: 24px 32px;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    text-align: center;
+    box-shadow: 0 0 0 8px #D4A017, 0 30px 80px rgba(0,0,0,0.6);
+  }
+
+  #done-card h2 {
+    font-size: 28px;
+    color: #7A1F1F;
+    margin-bottom: 8px;
+  }
+
+  #done-card p {
+    font-size: 22px;
+    color: #5A4030;
+    margin-bottom: 16px;
+  }
+
+  #player-drawing {
+    background: #FFFEF8;
+    border: 4px solid #7A1F1F;
+    border-radius: 12px;
+    margin: 10px auto;
+    padding: 8px;
+    max-width: 280px;
+    box-shadow: inset 0 2px 6px rgba(90,21,21,0.1);
+  }
+
+  #player-drawing img {
+    width: 100%;
+    display: block;
+  }
+</style>
+</head>
+<body>
+
+<div id="wrap">
+  <div id="prompt">
+    🧺 阿婆話：「跟住呢個購物籃畫返出嚟，越準確越好！」
+  </div>
+
+  <div id="reference">
+    <svg viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="#2B1A08" stroke-width="6" fill="none"
+         stroke-linecap="round" stroke-linejoin="round">
+        <rect x="60" y="100" width="140" height="140"/>
+        <rect x="110" y="50" width="140" height="140"/>
+        <line x1="60" y1="100" x2="110" y2="50"/>
+        <line x1="200" y1="100" x2="250" y2="50"/>
+        <line x1="60" y1="240" x2="110" y2="190"/>
+        <line x1="200" y1="240" x2="250" y2="190"/>
+      </g>
+    </svg>
+  </div>
+
+  <div id="canvas-wrap">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div id="footer">
+    <button class="btn secondary" id="clear-btn">🔄 清除</button>
+    <button class="btn" id="done-btn" disabled>✅ 完成</button>
+  </div>
+</div>
+
+<div id="done-panel">
+  <div id="done-card">
+    <h2>✅ 完成啦！</h2>
+    <p>請拉向下撳<br>「➡️ 去下一關」</p>
+
+    <div id="player-drawing">
+      <img id="player-img" alt="玩家畫嘅購物籃">
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let isDrawing = false;
+let hasDrawn = false;
+let strokes = [];
+let currentStroke = null;
+
+function resizeCanvas() {
+  const wrap = document.getElementById("canvas-wrap");
+  const rect = wrap.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + "px";
+  canvas.style.height = rect.height + "px";
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#2B1A08";
+
+  redraw();
+}
+
+window.addEventListener("load", resizeCanvas);
+window.addEventListener("resize", resizeCanvas);
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top,
+  };
+}
+
+function startDraw(e) {
+  e.preventDefault();
+  isDrawing = true;
+  const pos = getPos(e);
+  currentStroke = [pos];
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y);
+}
+
+function moveDraw(e) {
+  if (!isDrawing) return;
+  e.preventDefault();
+  const pos = getPos(e);
+  currentStroke.push(pos);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+  hasDrawn = true;
+  document.getElementById("done-btn").disabled = false;
+}
+
+function endDraw(e) {
+  if (!isDrawing) return;
+  isDrawing = false;
+  if (currentStroke && currentStroke.length > 0) {
+    strokes.push(currentStroke);
+  }
+  currentStroke = null;
+}
+
+canvas.addEventListener("pointerdown", startDraw);
+canvas.addEventListener("pointermove", moveDraw);
+canvas.addEventListener("pointerup", endDraw);
+canvas.addEventListener("pointercancel", endDraw);
+canvas.addEventListener("pointerleave", endDraw);
+
+function redraw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  strokes.forEach(stroke => {
+    if (stroke.length === 0) return;
+    ctx.beginPath();
+    ctx.moveTo(stroke[0].x, stroke[0].y);
+    for (let i = 1; i < stroke.length; i++) {
+      ctx.lineTo(stroke[i].x, stroke[i].y);
+    }
+    ctx.stroke();
+  });
+}
+
+document.getElementById("clear-btn").addEventListener("click", () => {
+  strokes = [];
+  hasDrawn = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  document.getElementById("done-btn").disabled = true;
+});
+
+function injectValueIntoStreamlitWidget(text) {
+  try {
+    const win = window.parent;
+    const currentUrl = new URL(win.location.href);
+    currentUrl.searchParams.set("game2_result", text);
+    win.history.replaceState({}, "", currentUrl.toString());
+    console.log("✅ 已寫入 URL，size (KB):", Math.round(text.length / 1024));
+  } catch (e) {
+    console.log("❌ URL 寫入失敗：", e);
+  }
+}
+
+function compressCanvas(canvas, maxW = 250) {
+  const scale = Math.min(1, maxW / canvas.width);
+  const tmp = document.createElement("canvas");
+  tmp.width = Math.round(canvas.width * scale);
+  tmp.height = Math.round(canvas.height * scale);
+  const tctx = tmp.getContext("2d");
+  tctx.fillStyle = "#FFFFFF";
+  tctx.fillRect(0, 0, tmp.width, tmp.height);
+  tctx.drawImage(canvas, 0, 0, tmp.width, tmp.height);
+  return tmp.toDataURL("image/jpeg", 0.7);
+}
+
+document.getElementById("done-btn").addEventListener("click", () => {
+  const dataURL = canvas.toDataURL("image/png");
+  document.getElementById("player-img").src = dataURL;
+  document.getElementById("done-panel").classList.add("show");
+
+  const compressed = compressCanvas(canvas, 250);
+
+  const result = {
+    game_id: "game2",
+    completed: true,
+    stroke_count: strokes.length,
+    total_points: strokes.reduce((sum, s) => sum + s.length, 0),
+    image: compressed,
+  };
+
+  console.log("=== 遊戲結果（已傳出）===");
+  console.log("image size (KB):", Math.round(compressed.length / 1024));
+
+  injectValueIntoStreamlitWidget(JSON.stringify(result));
+});
+</script>
+</body>
+</html>
+"""
+
 # --- VISUAL CSS & SUPERMARKET IMMERSION STYLING ---
 st.markdown(
     """
@@ -762,7 +1129,7 @@ st.markdown(
     margin-bottom: 20px;
 }
 
-/* Instruction box above Game 1 */
+/* Instruction box above Games */
 .game-instruction-card {
     background: linear-gradient(180deg, #F5E6C8 0%, #E8D4A8 100%);
     border: 3px solid #7A1F1F;
@@ -887,10 +1254,12 @@ st.markdown(
 for key, value in {
     "stage": "intro",
     "game1_result": None,
+    "game2_result": None,
     "current_item_index": 0,
     "telemetry_logs": [],
     "item_start_time": None,
-    "moca_visuospatial_score": 0,
+    "moca_visuospatial_score": 0,  # Trail Making
+    "moca_drawing_score": 0,       # Cube / Basket Copy
     "moca_naming_score": 0,
     "moca_memory_score": 0,
     "reg_trial_1_items": [],
@@ -1280,14 +1649,13 @@ elif st.session_state.stage == "game1":
         unsafe_allow_html=True,
     )
 
-    # 1. Game instructions displayed above the game
     game1_instruction_text = "請將硬幣與紙幣交錯連接"
     st.markdown(
         f"""
     <div class="game-instruction-card">
         <div class="game-instruction-title">💡 遊戲指引</div>
         <div class="game-instruction-text">
-            請將硬幣與紙幣交錯連接<br>
+            {game1_instruction_text}<br>
             例如：1 元硬幣 ➔ 10 元紙幣 ➔ 2 元硬幣 ➔ ...
         </div>
     </div>
@@ -1295,7 +1663,6 @@ elif st.session_state.stage == "game1":
         unsafe_allow_html=True,
     )
 
-    # 2. Button to read aloud the question / instruction
     render_instruction_speaker_component(
         game1_instruction_text, 
         key_suffix="game1_instruction", 
@@ -1331,20 +1698,85 @@ elif st.session_state.stage == "game1":
                     }
                 )
 
+        st.session_state.stage = "game2"
+        st.rerun()
+
+# --- STAGE 3: GAME 2 (畫購物籃) ---
+elif st.session_state.stage == "game2":
+    st.markdown(
+        """
+    <div class="market-banner">
+        <h1 style="margin:0; font-size:32px; color:#FFFFFF !important;">🧺 第二關：畫購物籃遊戲</h1>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    game2_instruction_text = "跟住呢個購物籃畫返出嚟，越準確越好！"
+    st.markdown(
+        f"""
+    <div class="game-instruction-card">
+        <div class="game-instruction-title">💡 遊戲指引</div>
+        <div class="game-instruction-text">
+            🧺 阿婆話：「{game2_instruction_text}」
+        </div>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    render_instruction_speaker_component(
+        game2_instruction_text, 
+        key_suffix="game2_instruction", 
+        btn_label="🔊 聽阿婆語音指引 (Read Aloud)"
+    )
+
+    query_params = st.query_params
+    if "game2_result" in query_params:
+        try:
+            st.session_state.game2_result = json.loads(query_params["game2_result"])
+        except Exception:
+            st.session_state.game2_result = query_params["game2_result"]
+
+    components.html(GAME2_HTML, height=580, scrolling=False)
+
+    if st.button("➡️ 去下一關"):
+        if st.session_state.game2_result:
+            res = st.session_state.game2_result
+            if isinstance(res, dict):
+                completed = res.get("completed", False)
+                stroke_count = res.get("stroke_count", 0)
+                # Cube Copy evaluation standard: Completed drawing with valid stroke lines
+                score = 1 if (completed and stroke_count > 0) else 0
+                st.session_state.moca_drawing_score = score
+                st.session_state.telemetry_logs.append(
+                    {
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "task": "visuospatial_cube_copy",
+                        "item_id": "game2_basket_drawing",
+                        "target_name": "3D Shopping Basket Copy",
+                        "user_response": f"Strokes: {stroke_count}, Points: {res.get('total_points', 0)}",
+                        "is_correct": completed and stroke_count > 0,
+                        "score_awarded": score,
+                        "latency_seconds": 0.0,
+                        "notes": f"Base64 Image Captured Length: {len(res.get('image', ''))}",
+                    }
+                )
+
         st.session_state.stage = "memory_reg_1"
         st.session_state.current_item_index = 0
         st.session_state.moca_naming_score = 0
         st.session_state.moca_memory_score = 0
         st.rerun()
 
-# --- STAGE 3: SHOPPING LIST TRIAL 1 ---
+# --- STAGE 4: SHOPPING LIST TRIAL 1 ---
 elif st.session_state.stage == "memory_reg_1":
     inst_1 = "請聽清楚超市廣播的 5 個詞語，聽完後講出你記得的。"
 
     st.markdown(
         """
     <div class="market-banner">
-        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">📝 第二站：觀察四周事物 (1/2)</h1>
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">📝 第三站：觀察四周事物 (1/2)</h1>
     </div>
     """,
         unsafe_allow_html=True,
@@ -1384,14 +1816,14 @@ elif st.session_state.stage == "memory_reg_1":
             st.session_state.stage = "memory_reg_2"
             st.rerun()
 
-# --- STAGE 4: SHOPPING LIST TRIAL 2 ---
+# --- STAGE 5: SHOPPING LIST TRIAL 2 ---
 elif st.session_state.stage == "memory_reg_2":
     inst_2 = "超市廣播會再播一次，請再次講出記得的東西（包括剛才講過的）。"
 
     st.markdown(
         """
     <div class="market-banner">
-        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">📝 第二站：觀察四周事物 (2/2)</h1>
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">📝 第三站：觀察四周事物 (2/2)</h1>
     </div>
     """,
         unsafe_allow_html=True,
@@ -1431,7 +1863,7 @@ elif st.session_state.stage == "memory_reg_2":
             st.session_state.stage = "memory_reg_notice"
             st.rerun()
 
-# --- STAGE 5: SHOPPING MEMO NOTICE PAGE ---
+# --- STAGE 6: SHOPPING MEMO NOTICE PAGE ---
 elif st.session_state.stage == "memory_reg_notice":
     inst_notice = "請緊記剛才這 5 樣東西！稍後去結帳時，需要重覆講出廣播提到的字！"
 
@@ -1453,7 +1885,7 @@ elif st.session_state.stage == "memory_reg_notice":
         st.session_state.item_start_time = time.time()
         st.rerun()
 
-# --- STAGE 6: NAMING GAME ---
+# --- STAGE 7: NAMING GAME ---
 elif st.session_state.stage == "naming":
     index = st.session_state.current_item_index
     item = NAMING_ITEMS[index]
@@ -1462,7 +1894,7 @@ elif st.session_state.stage == "naming":
     st.markdown(
         f"""
     <div class="market-banner">
-        <h1 style="margin:0; font-size:28px; color:#FFFFFF !important;">🔍 第三站：探索超市 ({index+1}/{len(NAMING_ITEMS)})</h1>
+        <h1 style="margin:0; font-size:28px; color:#FFFFFF !important;">🔍 第四站：探索超市 ({index+1}/{len(NAMING_ITEMS)})</h1>
     </div>
     """,
         unsafe_allow_html=True,
@@ -1492,14 +1924,14 @@ elif st.session_state.stage == "naming":
             advance_naming_item()
             st.rerun()
 
-# --- STAGE 7: CHECKOUT COUNTER (FREE RECALL) ---
+# --- STAGE 8: CHECKOUT COUNTER (FREE RECALL) ---
 elif st.session_state.stage == "delayed_recall_free":
     inst_free = "歡迎來到結帳處！請講出最開始廣播的 5 樣東西"
 
     st.markdown(
         """
     <div class="market-banner">
-        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">💵 第四站：結帳</h1>
+        <h1 style="margin:0; font-size:30px; color:#FFFFFF !important;">💵 第五站：結帳</h1>
     </div>
     """,
         unsafe_allow_html=True,
@@ -1551,7 +1983,7 @@ elif st.session_state.stage == "delayed_recall_free":
                 st.session_state.stage = "complete"
             st.rerun()
 
-# --- STAGE 8: AISLE ASSISTANT (CUED RECALL) ---
+# --- STAGE 9: AISLE ASSISTANT (CUED RECALL) ---
 elif st.session_state.stage == "delayed_recall_cued_step":
     missed_list = st.session_state.missed_items
     curr_idx = st.session_state.cued_current_index
@@ -1639,7 +2071,7 @@ elif st.session_state.stage == "delayed_recall_cued_step":
                 st.session_state.cued_sub_step = "category"
                 st.rerun()
 
-# --- STAGE 9: GAME COMPLETE & DASHBOARD ---
+# --- STAGE 10: GAME COMPLETE & DASHBOARD ---
 elif st.session_state.stage == "complete":
     st.balloons()
 
@@ -1658,9 +2090,11 @@ elif st.session_state.stage == "complete":
     if st.button("🔄 再玩一次 (Play Again)"):
         st.session_state.stage = "intro"
         st.session_state.game1_result = None
+        st.session_state.game2_result = None
         st.session_state.current_item_index = 0
         st.session_state.telemetry_logs = []
         st.session_state.moca_visuospatial_score = 0
+        st.session_state.moca_drawing_score = 0
         st.session_state.moca_naming_score = 0
         st.session_state.moca_memory_score = 0
         st.session_state.reg_trial_1_items = []
@@ -1675,24 +2109,28 @@ elif st.session_state.stage == "complete":
 
     # Backend Dashboard for OT/ST Assessment
     with st.expander("🩺 Occupational Therapist / Speech Telemetry Dashboard", expanded=False):
-        st.subheader("Game 1 (接線遊戲) Result")
-        st.write(st.session_state.game1_result if st.session_state.game1_result else "No result recorded.")
+        st.subheader("Game Results Raw Output")
+        st.write("**Game 1 (Coin Trail):**", st.session_state.game1_result if st.session_state.game1_result else "No result recorded.")
+        st.write("**Game 2 (Basket Drawing):**", st.session_state.game2_result if st.session_state.game2_result else "No result recorded.")
 
         st.subheader("MoCA Sub-score Summary")
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
-            st.metric("1. Visuospatial / Exec", f"{st.session_state.moca_visuospatial_score} / 1 Point")
+            st.metric("1. Visuospatial Trail", f"{st.session_state.moca_visuospatial_score} / 1 Pt")
         with col2:
-            st.metric("2. Naming Sub-score", f"{st.session_state.moca_naming_score} / 3 Points")
+            st.metric("2. Cube/Basket Copy", f"{st.session_state.moca_drawing_score} / 1 Pt")
         with col3:
-            st.metric("3. Delayed Recall (Free)", f"{st.session_state.moca_memory_score} / 5 Points")
+            st.metric("3. Naming Sub-score", f"{st.session_state.moca_naming_score} / 3 Pts")
         with col4:
+            st.metric("4. Delayed Recall", f"{st.session_state.moca_memory_score} / 5 Pts")
+        with col5:
             total = (
                 st.session_state.moca_visuospatial_score
+                + st.session_state.moca_drawing_score
                 + st.session_state.moca_naming_score
                 + st.session_state.moca_memory_score
             )
-            st.metric("Combined MoCA Total", f"{total} / 9 Points")
+            st.metric("Combined MoCA Total", f"{total} / 10 Pts")
 
         st.subheader("Memory Breakdown")
         st.write(
