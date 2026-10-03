@@ -733,7 +733,7 @@ GAME2_HTML = """<!DOCTYPE html>
     color: #2B1A08;
     overflow: hidden;
     width: 100%;
-    height: 250%;
+    height: 100%;
     margin: 0;
     padding: 0;
     font-size: 24px;
@@ -743,7 +743,7 @@ GAME2_HTML = """<!DOCTYPE html>
   display: flex;
   flex-direction: column;
   width: 100%;
-  min-height: 100vh;
+  height: 100%;
   padding: 16px;
   gap: 12px;
   background: #FFF8E7; /* Outer card background */
