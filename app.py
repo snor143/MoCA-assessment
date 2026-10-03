@@ -731,6 +731,7 @@ GAME2_HTML = """<!DOCTYPE html>
     font-family: "Noto Sans TC", "PingFang HK", sans-serif;
     background: #F5E6C8;
     color: #2B1A08;
+    overflow: hidden;
     width: 100%;
     height: 100%;
     margin: 0;
@@ -739,17 +740,15 @@ GAME2_HTML = """<!DOCTYPE html>
   }
 
   #wrap {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    padding: 16px;
-    gap: 12px;
-    background: #FFF8E7;
-    border: 4px solid #7A1F1F;
-    border-radius: 16px;
-  }
-
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  padding: 16px;
+  gap: 12px;
+  background: #FFF8E7; /* Outer card background */
+  border-radius: 16px;
+}
   #reference {
     background: linear-gradient(180deg, #FFF8E7, #F5E6C8);
     border: 4px solid #7A1F1F;
@@ -758,7 +757,7 @@ GAME2_HTML = """<!DOCTYPE html>
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 25%;
+    height: 28%;
     min-height: 120px;
     max-height: 160px;
     position: relative;
@@ -782,18 +781,18 @@ GAME2_HTML = """<!DOCTYPE html>
   }
 
   #canvas-wrap {
-    flex: 1;
-    background: #FFFEF8;
-    border: 4px dashed #7A1F1F;
-    border-radius: 14px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: inset 0 2px 8px rgba(90,21,21,0.1);
-    min-height: 200px;
-  }
+  flex: 1;
+  background: #FFFEF8;
+  border: 4px dashed #7A1F1F;
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 2px 8px rgba(90,21,21,0.1);
+  min-height: 320px; /* Give it a concrete minimum height */
+}
 
   #canvas-wrap::before {
-    content: "✏️️ 喺呢度畫";
+    content: "✏️ 喺呢度畫";
     position: absolute;
     top: 6px;
     left: 12px;
@@ -816,7 +815,6 @@ GAME2_HTML = """<!DOCTYPE html>
     gap: 12px;
     justify-content: center;
     flex-shrink: 0;
-    padding-top: 4px;
   }
 
   .btn {
@@ -862,6 +860,47 @@ GAME2_HTML = """<!DOCTYPE html>
     justify-content: center;
     z-index: 999999;
     padding: 24px;
+  }
+
+  #done-panel.show { display: flex !important; }
+
+  #done-card {
+    background: linear-gradient(180deg, #F5E6C8, #E8D4A8);
+    border: 6px solid #7A1F1F;
+    border-radius: 24px;
+    padding: 24px 32px;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    text-align: center;
+    box-shadow: 0 0 0 8px #D4A017, 0 30px 80px rgba(0,0,0,0.6);
+  }
+
+  #done-card h2 {
+    font-size: 28px;
+    color: #7A1F1F;
+    margin-bottom: 8px;
+  }
+
+  #done-card p {
+    font-size: 22px;
+    color: #5A4030;
+    margin-bottom: 16px;
+  }
+
+  #player-drawing {
+    background: #FFFEF8;
+    border: 4px solid #7A1F1F;
+    border-radius: 12px;
+    margin: 10px auto;
+    padding: 8px;
+    max-width: 280px;
+    box-shadow: inset 0 2px 6px rgba(90,21,21,0.1);
+  }
+
+  #player-drawing img {
+    width: 100%;
+    display: block;
   }
 </style>
 </head>
