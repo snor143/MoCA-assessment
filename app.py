@@ -1281,14 +1281,14 @@ elif st.session_state.stage == "game1":
     )
 
     # 1. Game instructions displayed above the game
-    game1_instruction_text = "請按順序將硬幣與紙幣交錯連接：1元硬幣 → 10元紙幣 → 2元硬幣 → 20元紙幣 → 5元硬幣 → 50元紙幣 → 10元硬幣 → 100元紙幣"
+    game1_instruction_text = "請將硬幣與紙幣交錯連接：1元硬幣 → 10元紙幣 → 2元硬幣 → 20元紙幣 → 5元硬幣 → 50元紙幣 → 10元硬幣 → 100元紙幣"
     st.markdown(
         f"""
     <div class="game-instruction-card">
         <div class="game-instruction-title">💡 遊戲指引</div>
         <div class="game-instruction-text">
-            硬幣與紙幣交錯連接<br>
-            例：1 元硬幣 ➔ 10 元紙幣 ➔ 2 元硬幣 ➔ 20 元紙幣 ➔ 5 元硬幣 ➔ 50 元紙幣 ➔ 10 元硬幣 ➔ 100 元紙幣
+            請將硬幣與紙幣交錯連接<br>
+            例如：1 元硬幣 ➔ 10 元紙幣 ➔ 2 元硬幣 ➔ ... ➔ 100 元紙幣
         </div>
     </div>
     """,
