@@ -731,7 +731,6 @@ GAME2_HTML = """<!DOCTYPE html>
     font-family: "Noto Sans TC", "PingFang HK", sans-serif;
     background: #F5E6C8;
     color: #2B1A08;
-    overflow: hidden;
     width: 100%;
     height: 100%;
     margin: 0;
