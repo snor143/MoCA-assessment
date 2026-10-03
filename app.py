@@ -1288,7 +1288,7 @@ elif st.session_state.stage == "game1":
         <div class="game-instruction-title">💡 遊戲指引</div>
         <div class="game-instruction-text">
             請將硬幣與紙幣交錯連接<br>
-            例如：1 元硬幣 ➔ 10 元紙幣 ➔ 2 元硬幣 ➔ ... ➔ 100 元紙幣
+            例如：1 元硬幣 ➔ 10 元紙幣 ➔ 2 元硬幣 ➔ ...
         </div>
     </div>
     """,
