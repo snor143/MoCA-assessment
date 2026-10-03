@@ -743,7 +743,6 @@ GAME2_HTML = """<!DOCTYPE html>
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
   padding: 16px;
   gap: 12px;
   background: #FFF8E7; /* Outer card background */
@@ -786,7 +785,6 @@ GAME2_HTML = """<!DOCTYPE html>
   border: 4px dashed #7A1F1F;
   border-radius: 14px;
   position: relative;
-  overflow: hidden;
   box-shadow: inset 0 2px 8px rgba(90,21,21,0.1);
   min-height: 320px; /* Give it a concrete minimum height */
 }
