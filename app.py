@@ -103,46 +103,30 @@ GAME1_HTML = """<!DOCTYPE html>
   #footer {
     position: absolute;
     bottom: 0; left: 0; right: 0;
-    padding: 14px 18px;
+    padding: 12px 18px;
     background: linear-gradient(180deg,
       rgba(245, 230, 200, 0.94) 0%,
       rgba(232, 212, 168, 0.98) 100%);
     border-top: 3px solid #7A1F1F;
     box-shadow: 0 -2px 0 #D4A017;
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    z-index: 200;
-  }
-
-  #hint {
-    font-size: 23px;
-    font-weight: 700;
-    color: #7A1F1F;
-    width: 100%;
-    text-align: center;
-    line-height: 1.4;
-  }
-
-  #footer-buttons {
-    display: flex;
-    gap: 10px;
     justify-content: center;
-    flex-wrap: wrap;
+    align-items: center;
+    gap: 15px;
+    z-index: 200;
   }
 
   .btn {
     font-family: inherit;
-    font-size: 25px;
+    font-size: 22px;
     font-weight: 900;
-    padding: 12px 20px;
+    padding: 10px 22px;
     border: 3px solid #5A1515;
     border-radius: 10px;
     background: linear-gradient(180deg, #A83232 0%, #7A1F1F 100%);
     color: #F5E6C8;
     cursor: pointer;
-    min-width: 100px;
+    min-width: 110px;
     box-shadow: 0 3px 0 #5A1515;
   }
 
@@ -220,11 +204,8 @@ GAME1_HTML = """<!DOCTYPE html>
 </div>
 
 <div id="footer">
-  <div id="hint">💡硬幣與紙幣交錯連接<br> 例： 1 元硬幣 → 10 元紙幣 → 2 元硬幣 → …… → 100 元紙幣</div>
-  <div id="footer-buttons">
-    <button class="btn secondary" id="undo-btn" disabled>↩️ 撤銷</button>
-    <button class="btn" id="restart-btn">🔄 重新開始</button>
-  </div>
+  <button class="btn secondary" id="undo-btn" disabled>↩️ 撤銷</button>
+  <button class="btn" id="restart-btn">🔄 重新開始</button>
 </div>
 
 <div id="finish-popup">
@@ -288,7 +269,7 @@ const TARGET_CONNECTIONS = ITEMS.length - 1;
 const COIN_SIZE = 65;
 const BILL_W = 90;
 const BILL_H = 58;
-const FOOTER_H = 170;
+const FOOTER_H = 75;
 
 const FALLBACK_LAYOUT = [
   { id: "1d",   x: 0.25, y: 0.18 },
@@ -678,7 +659,6 @@ function makeConnection(from, to, startTime) {
 
   if (state.connections.length === TARGET_CONNECTIONS) {
     document.getElementById("finish-popup").classList.add("show");
-    document.getElementById("hint").textContent = "✅ 完成啦！請拉向下撳「➡️ 去下一關」";
 
     const seq = state.connections.map(c => c.from);
     seq.push(state.connections[state.connections.length - 1].to);
@@ -730,7 +710,6 @@ function undo() {
 
   if (state.connections.length < TARGET_CONNECTIONS) {
     document.getElementById("finish-popup").classList.remove("show");
-    document.getElementById("hint").textContent = "💡硬幣與紙幣交錯連接<br> 例： 1 元硬幣 → 10 元紙幣 → 2 元硬幣 → …… → 100 元紙幣";
   }
 }
 
@@ -738,7 +717,6 @@ function restart() {
   document.querySelectorAll(".coin").forEach(el => el.remove());
   document.getElementById("lines-layer").innerHTML = "";
   document.getElementById("finish-popup").classList.remove("show");
-  document.getElementById("hint").textContent = "💡硬幣與紙幣交錯連接<br> 例： 1 元硬幣 → 10 元紙幣 → 2 元硬幣 → …… → 100 元紙幣";
 
   state = {
     items: [], connections: [], undoCount: 0,
@@ -782,6 +760,32 @@ st.markdown(
     text-align: center;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     margin-bottom: 20px;
+}
+
+/* Instruction box above Game 1 */
+.game-instruction-card {
+    background: linear-gradient(180deg, #F5E6C8 0%, #E8D4A8 100%);
+    border: 3px solid #7A1F1F;
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    text-align: center;
+}
+
+.game-instruction-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #7A1F1F;
+    margin-bottom: 6px;
+}
+
+.game-instruction-text {
+    font-size: 20px;
+    font-weight: 700;
+    color: #2B1A08;
+    line-height: 1.4;
+    margin-bottom: 10px;
 }
 
 /* NPC Staff & Speech Bubble Layout */
@@ -849,17 +853,6 @@ st.markdown(
     border: 2px solid #C8E6C9;
     margin: 10px auto;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.item-badge {
-    display: inline-block;
-    background: #FF9800;
-    color: #FFFFFF;
-    font-weight: bold;
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 18px;
-    margin-bottom: 10px;
 }
 
 /* Input & Button Customization */
@@ -975,17 +968,17 @@ def render_staff_npc(dialogue_text, staff_type="manager", staff_name="店長阿M
     )
 
 
-def render_instruction_speaker_component(instruction_text, key_suffix):
-    """Voice speaker component for staff NPC dialogue."""
+def render_instruction_speaker_component(instruction_text, key_suffix, btn_label="🔊 聽店長語音指引 (Listen)"):
+    """Voice speaker component for reading instructions/dialogue aloud."""
     escaped_text = html.escape(instruction_text).replace("'", "\\'")
     components.html(
         f"""
     <!doctype html><html><head><meta charset="utf-8"><style>
     body {{ margin:0; font-family:sans-serif; background:transparent; display:flex; justify-content:center; }}
-    button {{ width:100%; max-width:340px; height:44px; font-size:16px; font-weight:bold; color:#FFFFFF !important; background:#FF9800; border:none; border-radius:8px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.15); }}
+    button {{ width:100%; max-width:360px; height:48px; font-size:18px; font-weight:bold; color:#FFFFFF !important; background:#FF9800; border:none; border-radius:10px; cursor:pointer; box-shadow:0 3px 6px rgba(0,0,0,0.15); }}
     button:hover {{ background:#E65100; }}
     </style></head><body>
-    <button id="inst_btn_{key_suffix}" type="button">🔊 聽店長語音指引 (Listen)</button>
+    <button id="inst_btn_{key_suffix}" type="button">{btn_label}</button>
 
     <script>
     const text = "{escaped_text}";
@@ -997,7 +990,7 @@ def render_instruction_speaker_component(instruction_text, key_suffix):
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'zh-HK';
-      utterance.rate = 0.9;
+      utterance.rate = 0.88;
 
       const voices = window.speechSynthesis.getVoices();
       const hkVoice = voices.find(v => v.lang === 'zh-HK' || v.lang === 'yue-Hant-HK' || v.lang.includes('HK'));
@@ -1009,7 +1002,7 @@ def render_instruction_speaker_component(instruction_text, key_suffix):
     btn.onclick = speakInstruction;
     </script></body></html>
     """,
-        height=50,
+        height=52,
     )
 
 
@@ -1282,10 +1275,31 @@ elif st.session_state.stage == "game1":
         """
     <div class="market-banner">
         <h1 style="margin:0; font-size:32px; color:#FFFFFF !important;">🔌 第一關：街市接線遊戲</h1>
-        <p style="margin:5px 0 0 0; font-size:18px; opacity:0.9;">請按照指示將硬幣和紙幣交錯連接起來！</p>
     </div>
     """,
         unsafe_allow_html=True,
+    )
+
+    # 1. Game instructions displayed above the game
+    game1_instruction_text = "請按順序將硬幣與紙幣交錯連接：1元硬幣 → 10元紙幣 → 2元硬幣 → 20元紙幣 → 5元硬幣 → 50元紙幣 → 10元硬幣 → 100元紙幣"
+    st.markdown(
+        f"""
+    <div class="game-instruction-card">
+        <div class="game-instruction-title">💡 遊戲指引</div>
+        <div class="game-instruction-text">
+            硬幣與紙幣交錯連接<br>
+            例：1 元硬幣 ➔ 10 元紙幣 ➔ 2 元硬幣 ➔ 20 元紙幣 ➔ 5 元硬幣 ➔ 50 元紙幣 ➔ 10 元硬幣 ➔ 100 元紙幣
+        </div>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    # 2. Button to read aloud the question / instruction
+    render_instruction_speaker_component(
+        game1_instruction_text, 
+        key_suffix="game1_instruction", 
+        btn_label="🔊 聽遊戲指引 (Read Aloud)"
     )
 
     query_params = st.query_params
@@ -1295,7 +1309,7 @@ elif st.session_state.stage == "game1":
         except Exception:
             st.session_state.game1_result = query_params["game1_result"]
 
-    components.html(GAME1_HTML, height=620, scrolling=False)
+    components.html(GAME1_HTML, height=520, scrolling=False)
 
     if st.button("➡️ 去下一關"):
         if st.session_state.game1_result:
