@@ -922,11 +922,6 @@ GAME2_HTML = """<!DOCTYPE html>
 </head>
 <body>
 
-<div id="wrap">
-  <div id="prompt">
-    🧺 阿婆話：「跟住呢個購物籃畫返出嚟，越準確越好！」
-  </div>
-
   <div id="reference">
     <svg viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
       <g stroke="#2B1A08" stroke-width="6" fill="none"
@@ -1717,7 +1712,10 @@ elif st.session_state.stage == "game2":
         f"""
     <div class="game-instruction-card">
         <div class="game-instruction-title">💡 遊戲指引</div>
-    </div>
+            <div class="game-instruction-text">
+            🧺 阿婆話：「{game2_instruction_text}」
+            </div>
+        </div>
     """,
         unsafe_allow_html=True,
     )
