@@ -222,9 +222,8 @@ function injectValueIntoStreamlitWidget(text) {
     const currentUrl = new URL(win.location.href);
     currentUrl.searchParams.set("game1_result", text);
     win.history.replaceState({}, "", currentUrl.toString());
-    console.log("✅ 已寫入 URL：", currentUrl.toString());
   } catch (e) {
-    console.log("❌ URL 寫入失敗：", e);
+    console.log("URL write failed:", e);
   }
 }
 
@@ -663,9 +662,6 @@ function makeConnection(from, to, startTime) {
       completion_time_sec: roundToTwo(duration)
     };
 
-    console.log("=== 遊戲結果 ===");
-    console.log(JSON.stringify(resultData, null, 2));
-
     injectValueIntoStreamlitWidget(JSON.stringify(resultData));
   }
 }
@@ -750,19 +746,6 @@ GAME2_HTML = """<!DOCTYPE html>
     height: 100%;
     padding: 10px;
     gap: 8px;
-  }
-
-  #prompt {
-    background: linear-gradient(180deg, #A83232, #7A1F1F);
-    color: #F5E6C8;
-    padding: 12px 20px;
-    border-radius: 14px;
-    border: 3px solid #D4A017;
-    font-size: 20px;
-    font-weight: 700;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(90,21,21,0.3);
-    flex-shrink: 0;
   }
 
   #reference {
@@ -944,7 +927,6 @@ GAME2_HTML = """<!DOCTYPE html>
     <button class="btn secondary" id="clear-btn">🔄 清除</button>
     <button class="btn" id="done-btn" disabled>✅ 完成</button>
   </div>
-</div>
 
 <div id="done-panel">
   <div id="done-card">
@@ -1057,22 +1039,9 @@ function injectValueIntoStreamlitWidget(text) {
     const currentUrl = new URL(win.location.href);
     currentUrl.searchParams.set("game2_result", text);
     win.history.replaceState({}, "", currentUrl.toString());
-    console.log("✅ 已寫入 URL，size (KB):", Math.round(text.length / 1024));
   } catch (e) {
-    console.log("❌ URL 寫入失敗：", e);
+    console.log("URL write failed:", e);
   }
-}
-
-function compressCanvas(canvas, maxW = 250) {
-  const scale = Math.min(1, maxW / canvas.width);
-  const tmp = document.createElement("canvas");
-  tmp.width = Math.round(canvas.width * scale);
-  tmp.height = Math.round(canvas.height * scale);
-  const tctx = tmp.getContext("2d");
-  tctx.fillStyle = "#FFFFFF";
-  tctx.fillRect(0, 0, tmp.width, tmp.height);
-  tctx.drawImage(canvas, 0, 0, tmp.width, tmp.height);
-  return tmp.toDataURL("image/jpeg", 0.7);
 }
 
 document.getElementById("done-btn").addEventListener("click", () => {
@@ -1080,18 +1049,12 @@ document.getElementById("done-btn").addEventListener("click", () => {
   document.getElementById("player-img").src = dataURL;
   document.getElementById("done-panel").classList.add("show");
 
-  const compressed = compressCanvas(canvas, 250);
-
   const result = {
     game_id: "game2",
     completed: true,
     stroke_count: strokes.length,
     total_points: strokes.reduce((sum, s) => sum + s.length, 0),
-    image: compressed,
   };
-
-  console.log("=== 遊戲結果（已傳出）===");
-  console.log("image size (KB):", Math.round(compressed.length / 1024));
 
   injectValueIntoStreamlitWidget(JSON.stringify(result));
 });
@@ -1104,7 +1067,6 @@ document.getElementById("done-btn").addEventListener("click", () => {
 st.markdown(
     """
 <style>
-/* Full Supermarket Store Background Image with Blur Overlay */
 .stApp {
     background: linear-gradient(rgba(245, 247, 248, 0.88), rgba(245, 247, 248, 0.88)),
                 url('https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=1600&auto=format&fit=crop');
@@ -1113,7 +1075,6 @@ st.markdown(
     background-attachment: fixed;
 }
 
-/* Supermarket Banner Style */
 .market-banner {
     background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%);
     color: #FFFFFF !important;
@@ -1124,7 +1085,6 @@ st.markdown(
     margin-bottom: 20px;
 }
 
-/* Instruction box above Games */
 .game-instruction-card {
     background: linear-gradient(180deg, #F5E6C8 0%, #E8D4A8 100%);
     border: 3px solid #7A1F1F;
@@ -1150,7 +1110,6 @@ st.markdown(
     margin-bottom: 10px;
 }
 
-/* NPC Staff & Speech Bubble Layout */
 .npc-container {
     display: flex;
     align-items: flex-end;
@@ -1196,7 +1155,6 @@ st.markdown(
     width: 0;
 }
 
-/* Supermarket Shelf / Display Card */
 .market-shelf-card {
     background: rgba(255, 255, 255, 0.95);
     border: 2px solid #81C784;
@@ -1217,7 +1175,6 @@ st.markdown(
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
-/* Input & Button Customization */
 .stTextInput > div > div > input {
     font-size: 22px !important;
     height: 58px !important;
@@ -1253,8 +1210,8 @@ for key, value in {
     "current_item_index": 0,
     "telemetry_logs": [],
     "item_start_time": None,
-    "moca_visuospatial_score": 0,  # Trail Making
-    "moca_drawing_score": 0,       # Cube / Basket Copy
+    "moca_visuospatial_score": 0,
+    "moca_drawing_score": 0,
     "moca_naming_score": 0,
     "moca_memory_score": 0,
     "reg_trial_1_items": [],
@@ -1265,6 +1222,8 @@ for key, value in {
     "cued_sub_step": "category",
     "recalled_cued_items": {},
     "recalled_choice_items": {},
+    "input_reg_1": "",
+    "input_reg_2": "",
 }.items():
     if key not in st.session_state:
         st.session_state[key] = value
@@ -1311,7 +1270,6 @@ NAMING_ITEMS = [
 # --- UI COMPONENT FUNCTIONS ---
 
 def render_staff_npc(dialogue_text, staff_type="manager", staff_name="店長阿Ming"):
-    """Renders the Store Staff NPC avatar alongside a retro speech bubble."""
     avatar_urls = {
         "manager": "https://cdn-icons-png.flaticon.com/512/4140/4140047.png",
         "cashier": "https://cdn-icons-png.flaticon.com/512/3052/3052217.png",
@@ -1333,7 +1291,6 @@ def render_staff_npc(dialogue_text, staff_type="manager", staff_name="店長阿M
 
 
 def render_instruction_speaker_component(instruction_text, key_suffix, btn_label="🔊 聽店長語音指引 (Listen)"):
-    """Voice speaker component for reading instructions/dialogue aloud."""
     escaped_text = html.escape(instruction_text).replace("'", "\\'")
     components.html(
         f"""
@@ -1347,6 +1304,10 @@ def render_instruction_speaker_component(instruction_text, key_suffix, btn_label
     <script>
     const text = "{escaped_text}";
     const btn = document.getElementById('inst_btn_{key_suffix}');
+
+    if ('speechSynthesis' in window) {{
+      window.speechSynthesis.onvoiceschanged = () => {{ window.speechSynthesis.getVoices(); }};
+    }}
 
     function speakInstruction() {{
       if (!('speechSynthesis' in window)) return;
@@ -1371,7 +1332,6 @@ def render_instruction_speaker_component(instruction_text, key_suffix, btn_label
 
 
 def render_audio_speaker_component(words_list, key_suffix):
-    """Audio broadcaster for store PA shopping list system."""
     words_js_array = str(words_list)
     components.html(
         f"""
@@ -1454,7 +1414,6 @@ def render_audio_speaker_component(words_list, key_suffix):
 
 
 def render_mic_component(key_suffix, continuous_mode=False):
-    """Voice speech-to-text recording input component."""
     is_continuous_js = "true" if continuous_mode else "false"
     components.html(
         f"""
@@ -1615,7 +1574,6 @@ def advance_naming_item():
 # GAME FLOW STAGES
 # ==========================================
 
-# --- STAGE 1: FRONT WELCOME PAGE ---
 if st.session_state.stage == "intro":
     st.markdown(
         """
@@ -1633,7 +1591,6 @@ if st.session_state.stage == "intro":
         st.session_state.stage = "game1"
         st.rerun()
 
-# --- STAGE 2: GAME 1 (接線遊戲) ---
 elif st.session_state.stage == "game1":
     st.markdown(
         """
@@ -1696,7 +1653,6 @@ elif st.session_state.stage == "game1":
         st.session_state.stage = "game2"
         st.rerun()
 
-# --- STAGE 3: GAME 2 (畫購物籃) ---
 elif st.session_state.stage == "game2":
     st.markdown(
         """
@@ -1741,7 +1697,6 @@ elif st.session_state.stage == "game2":
             if isinstance(res, dict):
                 completed = res.get("completed", False)
                 stroke_count = res.get("stroke_count", 0)
-                # Cube Copy evaluation standard: Completed drawing with valid stroke lines
                 score = 1 if (completed and stroke_count > 0) else 0
                 st.session_state.moca_drawing_score = score
                 st.session_state.telemetry_logs.append(
@@ -1754,7 +1709,7 @@ elif st.session_state.stage == "game2":
                         "is_correct": completed and stroke_count > 0,
                         "score_awarded": score,
                         "latency_seconds": 0.0,
-                        "notes": f"Base64 Image Captured Length: {len(res.get('image', ''))}",
+                        "notes": "Drawing completed via canvas interface",
                     }
                 )
 
@@ -1764,7 +1719,6 @@ elif st.session_state.stage == "game2":
         st.session_state.moca_memory_score = 0
         st.rerun()
 
-# --- STAGE 4: SHOPPING LIST TRIAL 1 ---
 elif st.session_state.stage == "memory_reg_1":
     inst_1 = "請聽清楚超市廣播的 5 個詞語，聽完後講出你記得的。"
 
@@ -1789,9 +1743,10 @@ elif st.session_state.stage == "memory_reg_1":
         render_mic_component("reg_1", continuous_mode=True)
 
     with st.form(key="form_reg_1"):
-        user_answer = st.text_input("記得的詞語：", key="input_reg_1")
+        user_answer_input = st.text_input("記得的詞語：", key="input_reg_1")
         if st.form_submit_button("👉 記好了，下一步"):
-            spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
+            val = st.session_state.input_reg_1
+            spoken = [w.strip() for w in val.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
             st.session_state.reg_trial_1_items = spoken
 
             st.session_state.telemetry_logs.append(
@@ -1800,7 +1755,7 @@ elif st.session_state.stage == "memory_reg_1":
                     "task": "memory_registration_trial_1",
                     "item_id": "memory_reg_1",
                     "target_name": ", ".join(word_names),
-                    "user_response": user_answer,
+                    "user_response": val,
                     "is_correct": None,
                     "score_awarded": 0,
                     "latency_seconds": 0.0,
@@ -1811,7 +1766,6 @@ elif st.session_state.stage == "memory_reg_1":
             st.session_state.stage = "memory_reg_2"
             st.rerun()
 
-# --- STAGE 5: SHOPPING LIST TRIAL 2 ---
 elif st.session_state.stage == "memory_reg_2":
     inst_2 = "超市廣播會再播一次，請再次講出記得的東西（包括剛才講過的）。"
 
@@ -1836,9 +1790,10 @@ elif st.session_state.stage == "memory_reg_2":
         render_mic_component("reg_2", continuous_mode=True)
 
     with st.form(key="form_reg_2"):
-        user_answer = st.text_input("記得的詞語：", key="input_reg_2")
+        user_answer_input = st.text_input("記得的詞語：", key="input_reg_2")
         if st.form_submit_button("👉 記好了，進入超市"):
-            spoken = [w.strip() for w in user_answer.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
+            val = st.session_state.input_reg_2
+            spoken = [w.strip() for w in val.replace("，", ",").replace(" ", ",").split(",") if w.strip()]
             st.session_state.reg_trial_2_items = spoken
 
             st.session_state.telemetry_logs.append(
@@ -1847,7 +1802,7 @@ elif st.session_state.stage == "memory_reg_2":
                     "task": "memory_registration_trial_2",
                     "item_id": "memory_reg_2",
                     "target_name": ", ".join(word_names),
-                    "user_response": user_answer,
+                    "user_response": val,
                     "is_correct": None,
                     "score_awarded": 0,
                     "latency_seconds": 0.0,
@@ -1858,7 +1813,6 @@ elif st.session_state.stage == "memory_reg_2":
             st.session_state.stage = "memory_reg_notice"
             st.rerun()
 
-# --- STAGE 6: SHOPPING MEMO NOTICE PAGE ---
 elif st.session_state.stage == "memory_reg_notice":
     inst_notice = "請緊記剛才這 5 樣東西！稍後去結帳時，需要重覆講出廣播提到的字！"
 
@@ -1880,7 +1834,6 @@ elif st.session_state.stage == "memory_reg_notice":
         st.session_state.item_start_time = time.time()
         st.rerun()
 
-# --- STAGE 7: NAMING GAME ---
 elif st.session_state.stage == "naming":
     index = st.session_state.current_item_index
     item = NAMING_ITEMS[index]
@@ -1919,7 +1872,6 @@ elif st.session_state.stage == "naming":
             advance_naming_item()
             st.rerun()
 
-# --- STAGE 8: CHECKOUT COUNTER (FREE RECALL) ---
 elif st.session_state.stage == "delayed_recall_free":
     inst_free = "歡迎來到結帳處！請講出最開始廣播的 5 樣東西"
 
@@ -1978,7 +1930,6 @@ elif st.session_state.stage == "delayed_recall_free":
                 st.session_state.stage = "complete"
             st.rerun()
 
-# --- STAGE 9: AISLE ASSISTANT (CUED RECALL) ---
 elif st.session_state.stage == "delayed_recall_cued_step":
     missed_list = st.session_state.missed_items
     curr_idx = st.session_state.cued_current_index
@@ -2066,7 +2017,6 @@ elif st.session_state.stage == "delayed_recall_cued_step":
                 st.session_state.cued_sub_step = "category"
                 st.rerun()
 
-# --- STAGE 10: GAME COMPLETE & DASHBOARD ---
 elif st.session_state.stage == "complete":
     st.balloons()
 
@@ -2100,9 +2050,10 @@ elif st.session_state.stage == "complete":
         st.session_state.cued_sub_step = "category"
         st.session_state.recalled_cued_items = {}
         st.session_state.recalled_choice_items = {}
+        st.session_state.input_reg_1 = ""
+        st.session_state.input_reg_2 = ""
         st.rerun()
 
-    # Backend Dashboard for OT/ST Assessment
     with st.expander("🩺 Occupational Therapist / Speech Telemetry Dashboard", expanded=False):
         st.subheader("Game Results Raw Output")
         st.write("**Game 1 (Coin Trail):**", st.session_state.game1_result if st.session_state.game1_result else "No result recorded.")
