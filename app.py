@@ -350,17 +350,15 @@ function isInsideItem(px, py, item) {
   return Math.hypot(px - c.x, py - c.y) <= r;
 }
 
-// Precise check for drawn path intersections
 function checkPathCrossings(currentPath) {
   if (!currentPath || currentPath.length < 2) return false;
 
-  // 1. Check self-intersection of current path
   for (let i = 0; i < currentPath.length - 3; i++) {
     const a1 = { x: currentPath[i][0], y: currentPath[i][1] };
     const a2 = { x: currentPath[i + 1][0], y: currentPath[i + 1][1] };
 
     for (let j = i + 2; j < currentPath.length - 1; j++) {
-      if (i === 0 && j === currentPath.length - 2) continue; // ignore adjacent
+      if (i === 0 && j === currentPath.length - 2) continue;
       const b1 = { x: currentPath[j][0], y: currentPath[j][1] };
       const b2 = { x: currentPath[j + 1][0], y: currentPath[j + 1][1] };
 
@@ -368,7 +366,6 @@ function checkPathCrossings(currentPath) {
     }
   }
 
-  // 2. Check intersection against previously drawn connection paths
   for (const conn of state.connections) {
     const prevPath = conn.pathPoints;
     if (!prevPath || prevPath.length < 2) continue;
@@ -381,7 +378,6 @@ function checkPathCrossings(currentPath) {
         const b1 = { x: prevPath[j][0], y: prevPath[j][1] };
         const b2 = { x: prevPath[j + 1][0], y: prevPath[j + 1][1] };
 
-        // Skip end-point touching from adjacent connections
         const isEndpointTouch = (Math.hypot(a1.x - b1.x, a1.y - b1.y) < 15) ||
                                 (Math.hypot(a1.x - b2.x, a1.y - b2.y) < 15) ||
                                 (Math.hypot(a2.x - b1.x, a2.y - b1.y) < 15) ||
@@ -652,7 +648,6 @@ function onPointerUp(e) {
 function makeConnection(from, to, startTime) {
   const time = (performance.now() - startTime) / 1000;
   
-  // Snap target center as last point of drawn path
   const targetC = itemCenter(to);
   state.currentPath.push([targetC.x, targetC.y]);
 
@@ -691,7 +686,6 @@ function makeConnection(from, to, startTime) {
     const isOrderCorrect = JSON.stringify(seq) === JSON.stringify(CORRECT_SEQUENCE);
     const hasCrossing = state.connections.some(c => c.crosses);
     
-    // Strict MoCA Criterion: Score 1 ONLY IF sequence is correct AND no crossings exist
     const isCorrect = isOrderCorrect && !hasCrossing;
     const duration = (performance.now() - state.startTime) / 1000;
 
