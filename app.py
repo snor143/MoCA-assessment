@@ -1281,7 +1281,7 @@ elif st.session_state.stage == "game1":
     )
 
     # 1. Game instructions displayed above the game
-    game1_instruction_text = "請將硬幣與紙幣交錯連接：1元硬幣 → 10元紙幣 → 2元硬幣 → 20元紙幣 → 5元硬幣 → 50元紙幣 → 10元硬幣 → 100元紙幣"
+    game1_instruction_text = "請將硬幣與紙幣交錯連接"
     st.markdown(
         f"""
     <div class="game-instruction-card">
