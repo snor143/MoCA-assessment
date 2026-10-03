@@ -811,11 +811,15 @@ GAME2_HTML = """<!DOCTYPE html>
   }
 
   #footer {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    flex-shrink: 0;
-  }
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  z-index: 10;
+}
 
   .btn {
     font-family: inherit;
