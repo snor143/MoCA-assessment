@@ -733,7 +733,7 @@ GAME2_HTML = """<!DOCTYPE html>
     color: #2B1A08;
     overflow: hidden;
     width: 100%;
-    height: 100%;
+    height: 150%;
     margin: 0;
     padding: 0;
     font-size: 24px;
